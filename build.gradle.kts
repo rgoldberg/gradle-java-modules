@@ -1,4 +1,4 @@
-import org.gradle.api.JavaVersion.VERSION_1_7
+import org.gradle.api.JavaVersion.VERSION_1_9
 
 group   = "org.gradle.java"
 version = "0.1.1"
@@ -11,8 +11,17 @@ plugins {
 }
 
 java {
-    targetCompatibility = VERSION_1_7
-    sourceCompatibility = VERSION_1_7
+    targetCompatibility = VERSION_1_9
+    sourceCompatibility = VERSION_1_9
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    val compilerArgList = options.compilerArgs
+    compilerArgList += "--release"
+    compilerArgList += VERSION_1_9.majorVersion
+    compilerArgList += "-parameters"
+    compilerArgList += "-Xdoclint:all,-missing"
+    compilerArgList += "-Xlint:all,-requires-automatic,-requires-transitive-automatic"
 }
 
 // make the publishing plugin skip checks that disallow publishing to com.gradle / org.gradle groups
