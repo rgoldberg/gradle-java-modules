@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.google.common.collect.Iterables.addAll;
 import static com.google.common.io.MoreFiles.asCharSink;
 import static org.gradle.api.logging.Logging.getLogger;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_PLUGIN_NAME;
@@ -83,10 +84,11 @@ public class JigsawPlugin implements Plugin<Project> {
     private void configureCompileJavaTask(final Project project) {
         final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(COMPILE_JAVA_TASK_NAME);
         compileJava.doFirst(task -> {
-            final List<String> args = new ArrayList<>();
+            final List<String> args = compileJava.getOptions().getCompilerArgs();
+
             args.add("--module-path");
             args.add(compileJava.getClasspath().getAsPath());
-            compileJava.getOptions().setCompilerArgs(args);
+
             compileJava.setClasspath(project.files());
         });
     }
@@ -98,7 +100,8 @@ public class JigsawPlugin implements Plugin<Project> {
         final String moduleName = getJavaModuleName(project);
         compileTestJava.getInputs().property("moduleName", moduleName);
         compileTestJava.doFirst(task -> {
-            final List<String> args = new ArrayList<>();
+            final List<String> args = compileTestJava.getOptions().getCompilerArgs();
+
             args.add("--module-path");
             args.add(compileTestJava.getClasspath().getAsPath());
             args.add("--add-modules");
@@ -107,7 +110,7 @@ public class JigsawPlugin implements Plugin<Project> {
             args.add(moduleName + "=junit");
             args.add("--patch-module");
             args.add(moduleName + '=' + test.getJava().getSourceDirectories().getAsPath());
-            compileTestJava.getOptions().setCompilerArgs(args);
+
             compileTestJava.setClasspath(project.files());
         });
     }
@@ -120,6 +123,7 @@ public class JigsawPlugin implements Plugin<Project> {
         testTask.getInputs().property("moduleName", moduleName);
         testTask.doFirst(task -> {
             final List<String> args = new ArrayList<>();
+
             args.add("--module-path");
             args.add(testTask.getClasspath().getAsPath());
             args.add("--add-modules");
@@ -128,7 +132,9 @@ public class JigsawPlugin implements Plugin<Project> {
             args.add(moduleName + "=junit");
             args.add("--patch-module");
             args.add(moduleName + '=' + test.getJava().getOutputDir());
-            testTask.setJvmArgs(args);
+
+            testTask.jvmArgs(args);
+
             testTask.setClasspath(project.files());
         });
     }
@@ -140,11 +146,13 @@ public class JigsawPlugin implements Plugin<Project> {
         run.getInputs().property("moduleName", moduleName);
         run.doFirst(task -> {
             final List<String> args = new ArrayList<>();
+
             args.add("--module-path");
             args.add(run.getClasspath().getAsPath());
             args.add("--module");
             args.add(moduleName + '/' + run.getMain());
-            run.setJvmArgs(args);
+
+            run.jvmArgs(args);
             run.setMain("");
             run.setClasspath(project.files());
         });
@@ -156,14 +164,18 @@ public class JigsawPlugin implements Plugin<Project> {
         final String moduleName = getJavaModuleName(project);
         startScripts.getInputs().property("moduleName", moduleName);
         startScripts.doFirst(task -> {
-            startScripts.setClasspath(project.files());
             final List<String> args = new ArrayList<>();
+
+            addAll(args, startScripts.getDefaultJvmOpts());
+
             args.add("--module-path");
             args.add(LIB_DIR_PLACEHOLDER);
             args.add("--module");
             args.add(moduleName + '/' + startScripts.getMainClassName());
+
             startScripts.setDefaultJvmOpts(args);
             startScripts.setMainClassName("");
+            startScripts.setClasspath(project.files());
         });
         startScripts.doLast(task -> {
             replaceLibDirectoryPlaceholder(startScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
