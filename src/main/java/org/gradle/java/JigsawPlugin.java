@@ -100,8 +100,8 @@ public class JigsawPlugin implements Plugin<Project> {
     private void configureCompileTestJavaTask(final Project project) {
         final JavaCompile compileTestJava = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
         final SourceSet test = ((SourceSetContainer) project.getProperties().get("sourceSets")).getByName("test");
-        final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
-        compileTestJava.getInputs().property("moduleName", module.getName());
+        final String moduleName = getJavaModuleName(project);
+        compileTestJava.getInputs().property("moduleName", moduleName);
         compileTestJava.doFirst(new Action<Task>() {
             @Override
             public void execute(final Task task) {
@@ -111,9 +111,9 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--add-modules");
                 args.add("junit");
                 args.add("--add-reads");
-                args.add(module.getName() + "=junit");
+                args.add(moduleName + "=junit");
                 args.add("--patch-module");
-                args.add(module.getName() + '=' + test.getJava().getSourceDirectories().getAsPath());
+                args.add(moduleName + '=' + test.getJava().getSourceDirectories().getAsPath());
                 compileTestJava.getOptions().setCompilerArgs(args);
                 compileTestJava.setClasspath(project.files());
             }
@@ -124,8 +124,8 @@ public class JigsawPlugin implements Plugin<Project> {
     private void configureTestTask(final Project project) {
         final Test testTask = (Test) project.getTasks().findByName(TEST_TASK_NAME);
         final SourceSet test = ((SourceSetContainer) project.getProperties().get("sourceSets")).getByName("test");
-        final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
-        testTask.getInputs().property("moduleName", module.getName());
+        final String moduleName = getJavaModuleName(project);
+        testTask.getInputs().property("moduleName", moduleName);
         testTask.doFirst(new Action<Task>() {
             @Override
             public void execute(final Task task) {
@@ -135,9 +135,9 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--add-modules");
                 args.add("ALL-MODULE-PATH");
                 args.add("--add-reads");
-                args.add(module.getName() + "=junit");
+                args.add(moduleName + "=junit");
                 args.add("--patch-module");
-                args.add(module.getName() + '=' + test.getJava().getOutputDir());
+                args.add(moduleName + '=' + test.getJava().getOutputDir());
                 testTask.setJvmArgs(args);
                 testTask.setClasspath(project.files());
             }
@@ -147,8 +147,8 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureRunTask(final Project project) {
         final JavaExec run = (JavaExec) project.getTasks().findByName(TASK_RUN_NAME);
-        final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
-        run.getInputs().property("moduleName", module.getName());
+        final String moduleName = getJavaModuleName(project);
+        run.getInputs().property("moduleName", moduleName);
         run.doFirst(new Action<Task>() {
             @Override
             public void execute(final Task task) {
@@ -156,7 +156,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--module-path");
                 args.add(run.getClasspath().getAsPath());
                 args.add("--module");
-                args.add(module.getName() + '/' + run.getMain());
+                args.add(moduleName + '/' + run.getMain());
                 run.setJvmArgs(args);
                 run.setClasspath(project.files());
             }
@@ -166,8 +166,8 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureStartScriptsTask(final Project project) {
         final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().findByName(TASK_START_SCRIPTS_NAME);
-        final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
-        startScripts.getInputs().property("moduleName", module.getName());
+        final String moduleName = getJavaModuleName(project);
+        startScripts.getInputs().property("moduleName", moduleName);
         startScripts.doFirst(new Action<Task>() {
             @Override
             public void execute(final Task task) {
@@ -176,7 +176,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--module-path");
                 args.add(LIBS_PLACEHOLDER);
                 args.add("--module");
-                args.add(module.getName() + '/' + startScripts.getMainClassName());
+                args.add(moduleName + '/' + startScripts.getMainClassName());
                 startScripts.setDefaultJvmOpts(args);
             }
         });
@@ -201,5 +201,10 @@ public class JigsawPlugin implements Plugin<Project> {
         } catch (final IOException e) {
             throw new GradleException("Couldn't replace placeholder in " + path);
         }
+    }
+
+
+    private String getJavaModuleName(final Project project) {
+        return ((JavaModule) project.getExtensions().getByName(EXTENSION_NAME)).getName();
     }
 }
