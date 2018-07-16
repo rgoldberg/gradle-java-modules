@@ -1,9 +1,9 @@
-import static org.gradle.api.JavaVersion.VERSION_1_7
+import org.gradle.api.JavaVersion.VERSION_1_7
 
 plugins {
-    id("groovy")
-    id("idea")
-    id("java-gradle-plugin")
+    groovy
+    idea
+    `java-gradle-plugin`
     id("com.gradle.plugin-publish") version "0.10.1"
 }
 
@@ -26,15 +26,16 @@ repositories.jcenter()
 
 dependencies {
     testImplementation("org.spockframework:spock-core:1.3-groovy-2.5") {
-        exclude(module: "groovy-all")
+        exclude(module = "groovy-all")
     }
 }
 
-final String pluginId = "org.gradle.java.experimental-jigsaw"
+internal val pluginName = "experimentalJigsawPlugin"
+internal val pluginId   = "org.gradle.java.experimental-jigsaw"
 
 gradlePlugin {
-    plugins {
-        register("experimentalJigsawPlugin") {
+    (plugins) {
+        register(pluginName) {
             id                  = pluginId
             implementationClass = "org.gradle.java.JigsawPlugin"
         }
@@ -44,12 +45,12 @@ gradlePlugin {
 pluginBundle {
     website = "https://guides.gradle.org/building-java-9-modules"
     vcsUrl  = "https://github.com/gradle/gradle-java-modules"
-    plugins {
-        experimentalJigsawPlugin {
+    (plugins) {
+        pluginName {
             id          = pluginId
             displayName = "Experimental Jigsaw Plugin"
             description = "Experiment with Java 9 modules before they are officially supported."
-            tags        = ["jigsaw", "modules", "java9"]
+            tags        = listOf("jigsaw", "modules", "java9")
             version     = project.version.toString()
         }
     }
