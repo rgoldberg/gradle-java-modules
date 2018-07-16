@@ -113,7 +113,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--add-reads");
                 args.add(module.getName() + "=junit");
                 args.add("--patch-module");
-                args.add(module.getName() + "=" + test.getJava().getSourceDirectories().getAsPath());
+                args.add(module.getName() + '=' + test.getJava().getSourceDirectories().getAsPath());
                 compileTestJava.getOptions().setCompilerArgs(args);
                 compileTestJava.setClasspath(project.files());
             }
@@ -137,7 +137,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--add-reads");
                 args.add(module.getName() + "=junit");
                 args.add("--patch-module");
-                args.add(module.getName() + "=" + test.getJava().getOutputDir());
+                args.add(module.getName() + '=' + test.getJava().getOutputDir());
                 testTask.setJvmArgs(args);
                 testTask.setClasspath(project.files());
             }
@@ -156,7 +156,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--module-path");
                 args.add(run.getClasspath().getAsPath());
                 args.add("--module");
-                args.add(module.getName() + "/" + run.getMain());
+                args.add(module.getName() + '/' + run.getMain());
                 run.setJvmArgs(args);
                 run.setClasspath(project.files());
             }
@@ -176,7 +176,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--module-path");
                 args.add(LIBS_PLACEHOLDER);
                 args.add("--module");
-                args.add(module.getName() + "/" + startScripts.getMainClassName());
+                args.add(module.getName() + '/' + startScripts.getMainClassName());
                 startScripts.setDefaultJvmOpts(args);
             }
         });
