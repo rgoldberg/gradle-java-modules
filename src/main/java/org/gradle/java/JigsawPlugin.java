@@ -21,8 +21,6 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-import org.gradle.api.plugins.ApplicationPlugin;
 import org.gradle.api.plugins.AppliedPlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
@@ -40,10 +38,16 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JigsawPlugin implements Plugin<Project> {
-    private static final Logger LOGGER = Logging.getLogger(JigsawPlugin.class);
+import static org.gradle.api.logging.Logging.getLogger;
+import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_PLUGIN_NAME;
+import static org.gradle.api.plugins.ApplicationPlugin.TASK_RUN_NAME;
+import static org.gradle.api.plugins.ApplicationPlugin.TASK_START_SCRIPTS_NAME;
+import static org.gradle.api.plugins.JavaPlugin.COMPILE_JAVA_TASK_NAME;
+import static org.gradle.api.plugins.JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME;
+import static org.gradle.api.plugins.JavaPlugin.TEST_TASK_NAME;
 
-    private static final String APPLICATION_PLUGIN = "application";
+public class JigsawPlugin implements Plugin<Project> {
+    private static final Logger LOGGER = getLogger(JigsawPlugin.class);
 
     private static final String EXTENSION_NAME = "javaModule";
 
@@ -58,6 +62,7 @@ public class JigsawPlugin implements Plugin<Project> {
         configureJavaTasks(project);
     }
 
+
     private void configureJavaTasks(final Project project) {
         project.afterEvaluate(new Action<Project>() {
             @Override
@@ -65,7 +70,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 configureCompileJavaTask(project);
                 configureCompileTestJavaTask(project);
                 configureTestTask(project);
-                project.getPluginManager().withPlugin(APPLICATION_PLUGIN, new Action<AppliedPlugin>() {
+                project.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, new Action<AppliedPlugin>() {
                     @Override
                     public void execute(final AppliedPlugin appliedPlugin) {
                         configureRunTask(project);
@@ -76,8 +81,9 @@ public class JigsawPlugin implements Plugin<Project> {
         });
     }
 
+
     private void configureCompileJavaTask(final Project project) {
-        final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(JavaPlugin.COMPILE_JAVA_TASK_NAME);
+        final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(COMPILE_JAVA_TASK_NAME);
         compileJava.doFirst(new Action<Task>() {
             @Override
             public void execute(final Task task) {
@@ -90,9 +96,9 @@ public class JigsawPlugin implements Plugin<Project> {
         });
     }
 
+
     private void configureCompileTestJavaTask(final Project project) {
-        final JavaCompile compileTestJava = (JavaCompile) project.getTasks()
-                .findByName(JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME);
+        final JavaCompile compileTestJava = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
         final SourceSet test = ((SourceSetContainer) project.getProperties().get("sourceSets")).getByName("test");
         final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
         compileTestJava.getInputs().property("moduleName", module.getName());
@@ -114,8 +120,9 @@ public class JigsawPlugin implements Plugin<Project> {
         });
     }
 
+
     private void configureTestTask(final Project project) {
-        final Test testTask = (Test) project.getTasks().findByName(JavaPlugin.TEST_TASK_NAME);
+        final Test testTask = (Test) project.getTasks().findByName(TEST_TASK_NAME);
         final SourceSet test = ((SourceSetContainer) project.getProperties().get("sourceSets")).getByName("test");
         final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
         testTask.getInputs().property("moduleName", module.getName());
@@ -137,8 +144,9 @@ public class JigsawPlugin implements Plugin<Project> {
         });
     }
 
+
     private void configureRunTask(final Project project) {
-        final JavaExec run = (JavaExec) project.getTasks().findByName(ApplicationPlugin.TASK_RUN_NAME);
+        final JavaExec run = (JavaExec) project.getTasks().findByName(TASK_RUN_NAME);
         final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
         run.getInputs().property("moduleName", module.getName());
         run.doFirst(new Action<Task>() {
@@ -155,9 +163,9 @@ public class JigsawPlugin implements Plugin<Project> {
         });
     }
 
+
     private void configureStartScriptsTask(final Project project) {
-        final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks()
-                .findByName(ApplicationPlugin.TASK_START_SCRIPTS_NAME);
+        final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().findByName(TASK_START_SCRIPTS_NAME);
         final JavaModule module = (JavaModule) project.getExtensions().getByName(EXTENSION_NAME);
         startScripts.getInputs().property("moduleName", module.getName());
         startScripts.doFirst(new Action<Task>() {
