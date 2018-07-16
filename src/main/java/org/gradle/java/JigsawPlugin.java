@@ -30,14 +30,14 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.application.tasks.CreateStartScripts;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import static com.google.common.io.MoreFiles.asCharSink;
 import static org.gradle.api.logging.Logging.getLogger;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_PLUGIN_NAME;
 import static org.gradle.api.plugins.ApplicationPlugin.TASK_RUN_NAME;
@@ -45,13 +45,20 @@ import static org.gradle.api.plugins.ApplicationPlugin.TASK_START_SCRIPTS_NAME;
 import static org.gradle.api.plugins.JavaPlugin.COMPILE_JAVA_TASK_NAME;
 import static org.gradle.api.plugins.JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME;
 import static org.gradle.api.plugins.JavaPlugin.TEST_TASK_NAME;
+import static org.gradle.util.TextUtil.getUnixLineSeparator;
+import static org.gradle.util.TextUtil.getWindowsLineSeparator;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.Files.readAllLines;
+import static java.util.regex.Pattern.compile;
 
 public class JigsawPlugin implements Plugin<Project> {
     private static final Logger LOGGER = getLogger(JigsawPlugin.class);
 
     private static final String EXTENSION_NAME = "javaModule";
 
-    private static final String LIBS_PLACEHOLDER = "APP_HOME_LIBS_PLACEHOLDER";
+    private static final String  LIB_DIR_PLACEHOLDER         = "LIB_DIR_PLACEHOLDER";
+    private static final Pattern LIB_DIR_PLACEHOLDER_PATTERN = compile(LIB_DIR_PLACEHOLDER);
 
     @Override
     public void apply(final Project project) {
@@ -175,7 +182,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 startScripts.setClasspath(project.files());
                 final List<String> args = new ArrayList<>();
                 args.add("--module-path");
-                args.add(LIBS_PLACEHOLDER);
+                args.add(LIB_DIR_PLACEHOLDER);
                 args.add("--module");
                 args.add(moduleName + '/' + startScripts.getMainClassName());
                 startScripts.setDefaultJvmOpts(args);
@@ -185,23 +192,20 @@ public class JigsawPlugin implements Plugin<Project> {
         startScripts.doLast(new Action<Task>() {
             @Override
             public void execute(final Task task) {
-                final File bashScript = new File(startScripts.getOutputDir(), startScripts.getApplicationName());
-                replaceLibsPlaceHolder(bashScript.toPath(), "\\$APP_HOME/lib");
-                final File batFile = new File(startScripts.getOutputDir(), startScripts.getApplicationName() + ".bat");
-                replaceLibsPlaceHolder(batFile.toPath(), "%APP_HOME%\\lib");
+                replaceLibDirectoryPlaceholder(startScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
+                replaceLibDirectoryPlaceholder(startScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
             }
         });
     }
 
-    private void replaceLibsPlaceHolder(final Path path, final String newText) {
+    private void replaceLibDirectoryPlaceholder(final Path path, final String libDirReplacement, final String lineSeparator) {
         try {
-            final List<String> bashContent = new ArrayList<>(Files.readAllLines(path, StandardCharsets.UTF_8));
-            for (int i=0; i < bashContent.size(); i++) {
-                bashContent.set(i, bashContent.get(i).replaceFirst(LIBS_PLACEHOLDER, newText));
+            try (Stream<String> lineStream = readAllLines(path).stream().map(line -> LIB_DIR_PLACEHOLDER_PATTERN.matcher(line).replaceAll(libDirReplacement))) {
+                asCharSink(path, UTF_8).writeLines(lineStream, lineSeparator);
             }
-            Files.write(path, bashContent, StandardCharsets.UTF_8);
-        } catch (final IOException e) {
-            throw new GradleException("Couldn't replace placeholder in " + path);
+        }
+        catch (final IOException ex) {
+            throw new GradleException("Couldn't replace placeholder in " + path, ex);
         }
     }
 
