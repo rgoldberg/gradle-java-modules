@@ -15,9 +15,11 @@
  */
 package org.gradle.java;
 
+import com.google.common.collect.ImmutableSet;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
@@ -27,6 +29,7 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.application.tasks.CreateStartScripts;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,7 +37,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.addAll;
+import static com.google.common.collect.Streams.stream;
 import static com.google.common.io.MoreFiles.asCharSink;
 import static org.gradle.api.logging.Logging.getLogger;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_PLUGIN_NAME;
@@ -51,6 +56,7 @@ import static java.nio.file.Files.readAllLines;
 import static java.util.regex.Pattern.compile;
 
 public class JigsawPlugin implements Plugin<Project> {
+
     private static final Logger LOGGER = getLogger(JigsawPlugin.class);
 
     private static final String EXTENSION_NAME = "javaModule";
@@ -58,9 +64,10 @@ public class JigsawPlugin implements Plugin<Project> {
     private static final String  LIB_DIR_PLACEHOLDER         = "LIB_DIR_PLACEHOLDER";
     private static final Pattern LIB_DIR_PLACEHOLDER_PATTERN = compile(LIB_DIR_PLACEHOLDER);
 
+
     @Override
     public void apply(final Project project) {
-        LOGGER.debug("Applying JigsawPlugin to " + project.getName());
+        LOGGER.debug("Applying JigsawPlugin to {}", project.getName());
         project.getPlugins().apply(JavaPlugin.class);
         project.getExtensions().create(EXTENSION_NAME, JavaModule.class);
 
@@ -83,11 +90,16 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureCompileJavaTask(final Project project) {
         final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(COMPILE_JAVA_TASK_NAME);
+        final String moduleName = getJavaModuleName(project);
+        final ImmutableSet<File> outputDirFileIset =
+            getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
+        ;
         compileJava.doFirst(task -> {
             final List<String> args = compileJava.getOptions().getCompilerArgs();
 
-            args.add("--module-path");
-            args.add(compileJava.getClasspath().getAsPath());
+            addModulePathArgument(args, compileJava.getClasspath().filter(f -> ! outputDirFileIset.contains(f)));
+
+            addPatchModuleArgument(args, moduleName, compileJava.getClasspath().filter(outputDirFileIset::contains));
 
             compileJava.setClasspath(project.files());
         });
@@ -102,14 +114,15 @@ public class JigsawPlugin implements Plugin<Project> {
         compileTestJava.doFirst(task -> {
             final List<String> args = compileTestJava.getOptions().getCompilerArgs();
 
-            args.add("--module-path");
-            args.add(compileTestJava.getClasspath().getAsPath());
+            addModulePathArgument(args, compileTestJava.getClasspath());
+
             args.add("--add-modules");
             args.add("junit");
+
             args.add("--add-reads");
             args.add(moduleName + "=junit");
-            args.add("--patch-module");
-            args.add(moduleName + '=' + test.getJava().getSourceDirectories().getAsPath());
+
+            addPatchModuleArgument(args, moduleName, test.getJava().getSourceDirectories());
 
             compileTestJava.setClasspath(project.files());
         });
@@ -124,14 +137,15 @@ public class JigsawPlugin implements Plugin<Project> {
         testTask.doFirst(task -> {
             final List<String> args = new ArrayList<>();
 
-            args.add("--module-path");
-            args.add(testTask.getClasspath().getAsPath());
+            addModulePathArgument(args, testTask.getClasspath());
+
             args.add("--add-modules");
             args.add("ALL-MODULE-PATH");
+
             args.add("--add-reads");
             args.add(moduleName + "=junit");
-            args.add("--patch-module");
-            args.add(moduleName + '=' + test.getJava().getOutputDir());
+
+            addPatchModuleArgument(args, moduleName, test.getJava().getOutputDir());
 
             testTask.jvmArgs(args);
 
@@ -147,8 +161,8 @@ public class JigsawPlugin implements Plugin<Project> {
         run.doFirst(task -> {
             final List<String> args = new ArrayList<>();
 
-            args.add("--module-path");
-            args.add(run.getClasspath().getAsPath());
+            addModulePathArgument(args, run.getClasspath());
+
             args.add("--module");
             args.add(moduleName + '/' + run.getMain());
 
@@ -170,6 +184,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
             args.add("--module-path");
             args.add(LIB_DIR_PLACEHOLDER);
+
             args.add("--module");
             args.add(moduleName + '/' + startScripts.getMainClassName());
 
@@ -202,5 +217,25 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private static SourceSetContainer getSourceSets(final Project project) {
         return (SourceSetContainer) project.getProperties().get("sourceSets");
+    }
+
+
+    private void addModulePathArgument(final List<String> args, final FileCollection modulePathFileCollection) {
+        if (! modulePathFileCollection.isEmpty()) {
+            args.add("--module-path");
+            args.add(modulePathFileCollection.getAsPath());
+        }
+    }
+
+    private void addPatchModuleArgument(final List<String> args, final String moduleName, final File file) {
+        args.add("--patch-module");
+        args.add(moduleName + '=' + file);
+    }
+
+    private void addPatchModuleArgument(final List<String> args, final String moduleName, final FileCollection patchModuleFileCollection) {
+        if (! patchModuleFileCollection.isEmpty()) {
+            args.add("--patch-module");
+            args.add(moduleName + '=' + patchModuleFileCollection.getAsPath());
+        }
     }
 }
