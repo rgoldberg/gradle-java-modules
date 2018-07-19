@@ -1,23 +1,19 @@
 import org.gradle.api.JavaVersion.VERSION_1_7
 
+group   = "org.gradle.java"
+version = "0.1.1"
+
 plugins {
     groovy
-    idea
     `java-gradle-plugin`
+    `java-library`
     id("com.gradle.plugin-publish") version "0.10.1"
 }
-
-group = "org.gradle.java"
-
-version = "0.1.1"
 
 java {
     targetCompatibility = VERSION_1_7
     sourceCompatibility = VERSION_1_7
 }
-
-// Fix a bad interaction with IntelliJ and Gradle > 4.0
-idea.module.inheritOutputDirs = true
 
 // make the publishing plugin skip checks that disallow publishing to com.gradle / org.gradle groups
 System.setProperty("gradle.publish.skip.namespace.check", "true")
@@ -25,8 +21,8 @@ System.setProperty("gradle.publish.skip.namespace.check", "true")
 repositories.jcenter()
 
 dependencies {
-    testImplementation("org.spockframework:spock-core:1.3-groovy-2.5") {
-        exclude(module = "groovy-all")
+    testImplementation("org.spockframework", "spock-core", "1.3-groovy-2.5") {
+        exclude("org.codehaus.groovy", "groovy-all")
     }
 }
 
