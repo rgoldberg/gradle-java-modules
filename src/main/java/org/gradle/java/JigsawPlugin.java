@@ -106,7 +106,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureCompileTestJavaTask(final Project project) {
         final JavaCompile compileTestJava = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
-        final SourceSet test = ((SourceSetContainer) project.getProperties().get("sourceSets")).getByName("test");
+        final SourceSet test = getSourceSets(project).getByName("test");
         final String moduleName = getJavaModuleName(project);
         compileTestJava.getInputs().property("moduleName", moduleName);
         compileTestJava.doFirst(new Action<Task>() {
@@ -130,7 +130,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureTestTask(final Project project) {
         final Test testTask = (Test) project.getTasks().findByName(TEST_TASK_NAME);
-        final SourceSet test = ((SourceSetContainer) project.getProperties().get("sourceSets")).getByName("test");
+        final SourceSet test = getSourceSets(project).getByName("test");
         final String moduleName = getJavaModuleName(project);
         testTask.getInputs().property("moduleName", moduleName);
         testTask.doFirst(new Action<Task>() {
@@ -212,5 +212,10 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private String getJavaModuleName(final Project project) {
         return ((JavaModule) project.getExtensions().getByName(EXTENSION_NAME)).getName();
+    }
+
+
+    private static SourceSetContainer getSourceSets(final Project project) {
+        return (SourceSetContainer) project.getProperties().get("sourceSets");
     }
 }
