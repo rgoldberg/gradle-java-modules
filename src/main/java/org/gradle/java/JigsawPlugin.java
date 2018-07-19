@@ -15,13 +15,10 @@
  */
 package org.gradle.java;
 
-import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.logging.Logger;
-import org.gradle.api.plugins.AppliedPlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSet;
@@ -71,35 +68,26 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureJavaTasks(final Project project) {
-        project.afterEvaluate(new Action<Project>() {
-            @Override
-            public void execute(final Project project) {
-                configureCompileJavaTask(project);
-                configureCompileTestJavaTask(project);
-                configureTestTask(project);
-                project.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, new Action<AppliedPlugin>() {
-                    @Override
-                    public void execute(final AppliedPlugin appliedPlugin) {
-                        configureRunTask(project);
-                        configureStartScriptsTask(project);
-                    }
-                });
-            }
+        project.afterEvaluate(p -> {
+            configureCompileJavaTask(p);
+            configureCompileTestJavaTask(p);
+            configureTestTask(p);
+            p.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, appliedPlugin -> {
+                configureRunTask(p);
+                configureStartScriptsTask(p);
+            });
         });
     }
 
 
     private void configureCompileJavaTask(final Project project) {
         final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(COMPILE_JAVA_TASK_NAME);
-        compileJava.doFirst(new Action<Task>() {
-            @Override
-            public void execute(final Task task) {
-                final List<String> args = new ArrayList<>();
-                args.add("--module-path");
-                args.add(compileJava.getClasspath().getAsPath());
-                compileJava.getOptions().setCompilerArgs(args);
-                compileJava.setClasspath(project.files());
-            }
+        compileJava.doFirst(task -> {
+            final List<String> args = new ArrayList<>();
+            args.add("--module-path");
+            args.add(compileJava.getClasspath().getAsPath());
+            compileJava.getOptions().setCompilerArgs(args);
+            compileJava.setClasspath(project.files());
         });
     }
 
@@ -109,21 +97,18 @@ public class JigsawPlugin implements Plugin<Project> {
         final SourceSet test = getSourceSets(project).getByName("test");
         final String moduleName = getJavaModuleName(project);
         compileTestJava.getInputs().property("moduleName", moduleName);
-        compileTestJava.doFirst(new Action<Task>() {
-            @Override
-            public void execute(final Task task) {
-                final List<String> args = new ArrayList<>();
-                args.add("--module-path");
-                args.add(compileTestJava.getClasspath().getAsPath());
-                args.add("--add-modules");
-                args.add("junit");
-                args.add("--add-reads");
-                args.add(moduleName + "=junit");
-                args.add("--patch-module");
-                args.add(moduleName + '=' + test.getJava().getSourceDirectories().getAsPath());
-                compileTestJava.getOptions().setCompilerArgs(args);
-                compileTestJava.setClasspath(project.files());
-            }
+        compileTestJava.doFirst(task -> {
+            final List<String> args = new ArrayList<>();
+            args.add("--module-path");
+            args.add(compileTestJava.getClasspath().getAsPath());
+            args.add("--add-modules");
+            args.add("junit");
+            args.add("--add-reads");
+            args.add(moduleName + "=junit");
+            args.add("--patch-module");
+            args.add(moduleName + '=' + test.getJava().getSourceDirectories().getAsPath());
+            compileTestJava.getOptions().setCompilerArgs(args);
+            compileTestJava.setClasspath(project.files());
         });
     }
 
@@ -133,21 +118,18 @@ public class JigsawPlugin implements Plugin<Project> {
         final SourceSet test = getSourceSets(project).getByName("test");
         final String moduleName = getJavaModuleName(project);
         testTask.getInputs().property("moduleName", moduleName);
-        testTask.doFirst(new Action<Task>() {
-            @Override
-            public void execute(final Task task) {
-                final List<String> args = new ArrayList<>();
-                args.add("--module-path");
-                args.add(testTask.getClasspath().getAsPath());
-                args.add("--add-modules");
-                args.add("ALL-MODULE-PATH");
-                args.add("--add-reads");
-                args.add(moduleName + "=junit");
-                args.add("--patch-module");
-                args.add(moduleName + '=' + test.getJava().getOutputDir());
-                testTask.setJvmArgs(args);
-                testTask.setClasspath(project.files());
-            }
+        testTask.doFirst(task -> {
+            final List<String> args = new ArrayList<>();
+            args.add("--module-path");
+            args.add(testTask.getClasspath().getAsPath());
+            args.add("--add-modules");
+            args.add("ALL-MODULE-PATH");
+            args.add("--add-reads");
+            args.add(moduleName + "=junit");
+            args.add("--patch-module");
+            args.add(moduleName + '=' + test.getJava().getOutputDir());
+            testTask.setJvmArgs(args);
+            testTask.setClasspath(project.files());
         });
     }
 
@@ -156,18 +138,15 @@ public class JigsawPlugin implements Plugin<Project> {
         final JavaExec run = (JavaExec) project.getTasks().findByName(TASK_RUN_NAME);
         final String moduleName = getJavaModuleName(project);
         run.getInputs().property("moduleName", moduleName);
-        run.doFirst(new Action<Task>() {
-            @Override
-            public void execute(final Task task) {
-                final List<String> args = new ArrayList<>();
-                args.add("--module-path");
-                args.add(run.getClasspath().getAsPath());
-                args.add("--module");
-                args.add(moduleName + '/' + run.getMain());
-                run.setJvmArgs(args);
-                run.setMain("");
-                run.setClasspath(project.files());
-            }
+        run.doFirst(task -> {
+            final List<String> args = new ArrayList<>();
+            args.add("--module-path");
+            args.add(run.getClasspath().getAsPath());
+            args.add("--module");
+            args.add(moduleName + '/' + run.getMain());
+            run.setJvmArgs(args);
+            run.setMain("");
+            run.setClasspath(project.files());
         });
     }
 
@@ -176,25 +155,19 @@ public class JigsawPlugin implements Plugin<Project> {
         final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().findByName(TASK_START_SCRIPTS_NAME);
         final String moduleName = getJavaModuleName(project);
         startScripts.getInputs().property("moduleName", moduleName);
-        startScripts.doFirst(new Action<Task>() {
-            @Override
-            public void execute(final Task task) {
-                startScripts.setClasspath(project.files());
-                final List<String> args = new ArrayList<>();
-                args.add("--module-path");
-                args.add(LIB_DIR_PLACEHOLDER);
-                args.add("--module");
-                args.add(moduleName + '/' + startScripts.getMainClassName());
-                startScripts.setDefaultJvmOpts(args);
-                startScripts.setMainClassName("");
-            }
+        startScripts.doFirst(task -> {
+            startScripts.setClasspath(project.files());
+            final List<String> args = new ArrayList<>();
+            args.add("--module-path");
+            args.add(LIB_DIR_PLACEHOLDER);
+            args.add("--module");
+            args.add(moduleName + '/' + startScripts.getMainClassName());
+            startScripts.setDefaultJvmOpts(args);
+            startScripts.setMainClassName("");
         });
-        startScripts.doLast(new Action<Task>() {
-            @Override
-            public void execute(final Task task) {
-                replaceLibDirectoryPlaceholder(startScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
-                replaceLibDirectoryPlaceholder(startScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
-            }
+        startScripts.doLast(task -> {
+            replaceLibDirectoryPlaceholder(startScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
+            replaceLibDirectoryPlaceholder(startScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
         });
     }
 
