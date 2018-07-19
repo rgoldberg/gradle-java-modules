@@ -4,8 +4,8 @@ import org.gradle.api.JavaVersion.VERSION_1_9
 import org.gradle.api.artifacts.dsl.LockMode.STRICT
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-group   = "org.gradle.java"
-version = "0.1.1"
+group   = "rgoldberg"
+version = "0.5-SNAPSHOT"
 
 buildscript {
     configurations.configureEach {
@@ -120,9 +120,6 @@ tasks.gradleTest.configure {
 }
 */
 
-// make the publishing plugin skip checks that disallow publishing to com.gradle / org.gradle groups
-System.setProperty("gradle.publish.skip.namespace.check", "true")
-
 repositories.jcenter()
 
 dependencies {
@@ -140,8 +137,9 @@ dependencyLocking {
     lockMode = STRICT
 }
 
-internal val pluginName = "experimentalJigsawPlugin"
-internal val pluginId   = "org.gradle.java.experimental-jigsaw"
+internal val pluginName    = "experimentalJigsawPlugin"
+internal val pluginId      = "rgoldberg.experimental-jigsaw"
+internal val pluginWebsite = "https://github.com/rgoldberg/gradle-java-modules"
 
 gradlePlugin {
     (plugins) {
@@ -153,14 +151,14 @@ gradlePlugin {
 }
 
 pluginBundle {
-    website = "https://guides.gradle.org/building-java-9-modules"
-    vcsUrl  = "https://github.com/gradle/gradle-java-modules"
+    website = pluginWebsite
+    vcsUrl  = pluginWebsite
     (plugins) {
         pluginName {
             id          = pluginId
             displayName = "Experimental Jigsaw Plugin"
             description = "Experiment with Java 9 modules before they are officially supported."
-            tags        = listOf("jigsaw", "modules", "java9")
+            tags        = listOf("java", "java9", "jigsaw", "jpms", "modules")
             version     = project.version.toString()
         }
     }

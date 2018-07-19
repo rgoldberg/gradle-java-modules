@@ -1,5 +1,5 @@
 plugins {
-    id("org.gradle.java.experimental-jigsaw") version "0.1.1"
+    id("rgoldberg.experimental-jigsaw") version "0.5-SNAPSHOT"
 }
 
 group   = "com.example"

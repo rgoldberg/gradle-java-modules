@@ -7,7 +7,7 @@ for us to develop a shared knowledge of what we need to do to bring that first-c
 
 ## The Experimental Jigsaw Plugin
 Please feel free to use the
-[`org.gradle.java.experimental-jigsaw` Plugin](https://plugins.gradle.org/plugin/org.gradle.java.experimental-jigsaw)
+[`rgoldberg.experimental-jigsaw` Plugin](https://plugins.gradle.org/plugin/rgoldberg.experimental-jigsaw)
 developed in this repository, but understand that it is not very sophisticated or particularly well-tested at
 this point in its development.
 
@@ -16,6 +16,6 @@ If you already have a working Java project, applying the plugin is just one step
  1. Apply the plugin:
     ```groovy
     plugins {
-      id 'org.gradle.java.experimental-jigsaw' version '0.1.1'
+      id 'rgoldberg.experimental-jigsaw' version '0.5-SNAPSHOT'
     }
     ```
