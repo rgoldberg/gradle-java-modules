@@ -49,8 +49,6 @@ dependencies {
   testImplementation("junit", "junit", "4.12")
 }
 
-javaModule.name = "test.module"
-
 application.mainClassName = "com.example.AClass"
 '''
 

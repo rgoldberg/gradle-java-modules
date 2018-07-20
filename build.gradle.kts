@@ -1,7 +1,14 @@
 import org.gradle.api.JavaVersion.VERSION_1_9
+import org.gradle.api.artifacts.dsl.LockMode.STRICT
 
 group   = "org.gradle.java"
 version = "0.1.1"
+
+buildscript {
+    configurations.configureEach {
+        resolutionStrategy.activateDependencyLocking()
+    }
+}
 
 plugins {
     groovy
@@ -30,10 +37,16 @@ System.setProperty("gradle.publish.skip.namespace.check", "true")
 repositories.jcenter()
 
 dependencies {
-    implementation(    "com.google.guava",   "guava",      "28.1-jre")
-    testImplementation("org.spockframework", "spock-core", "1.3-groovy-2.5") {
+    implementation(    "com.github.javaparser", "javaparser-core", "3.15.11")
+    implementation(    "com.google.guava",      "guava",           "28.1-jre")
+    testImplementation("org.spockframework",    "spock-core",      "1.3-groovy-2.5") {
         exclude("org.codehaus.groovy", "groovy-all")
     }
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+    lockMode = STRICT
 }
 
 internal val pluginName = "experimentalJigsawPlugin"

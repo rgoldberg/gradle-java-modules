@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java;
+package org.gradle.java.jdk;
 
-/**
- * Represents information about a Java 9 module.
- */
-public class JavaModule {
-    private String moduleName;
+public interface JavaSourceTool extends JavaCommonTool {
 
-    public String getName() {
-        return moduleName;
-    }
+    String OPTION_RELEASE = "--release";
+    String OPTION_SOURCE  = "-source";
 
-    public void setName(String name) {
-        this.moduleName = name;
-    }
+    // module options
+    String OPTION_MODULE_SOURCE_PATH = "--module-source-path";
+    String OPTION_SYSTEM             = "--system";
+
+    // OPTION_SYSTEM values
+    String NONE = "none";
+
+    String FILE_NAME_MODULE_INFO_JAVA = "module-info.java";
 }
