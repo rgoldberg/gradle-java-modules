@@ -86,6 +86,7 @@ import static org.gradle.java.jdk.Javac.OPTION_MODULE_PATH;
 import static org.gradle.java.jdk.Javac.OPTION_PATCH_MODULE;
 import static org.gradle.java.jdk.Javac.OPTION_RELEASE;
 import static org.gradle.java.jdk.Javac.OPTION_SOURCE;
+import static org.gradle.java.testing.StandardTestFrameworkModuleInfo.getTestModuleNameCommaDelimitedString;
 import static org.gradle.util.TextUtil.getUnixLineSeparator;
 import static org.gradle.util.TextUtil.getWindowsLineSeparator;
 
@@ -104,8 +105,6 @@ public class JigsawPlugin implements Plugin<Project> {
     private static final Pattern LIB_DIR_PLACEHOLDER_PATTERN = compile(LIB_DIR_PLACEHOLDER);
 
     private static final String PROPERTY_NAME_MODULE_NAME = "moduleName";
-
-    private static final String MODULE_NAME_JUNIT = "junit";
 
     private static final String JAVADOC_TASK_OPTION_MODULE_PATH = org.gradle.java.jdk.Javadoc.OPTION_MODULE_PATH.substring(1);
 
@@ -351,11 +350,17 @@ public class JigsawPlugin implements Plugin<Project> {
 
             addModulePathArgument(args, compileTestJava.getClasspath());
 
-            args.add(OPTION_ADD_MODULES);
-            args.add(MODULE_NAME_JUNIT);
+            project.getTasks().withType(Test.class).configureEach(test -> {
+                final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
 
-            args.add(OPTION_ADD_READS);
-            args.add(mainModuleName + '=' + MODULE_NAME_JUNIT);
+                if (! testModuleNameCommaDelimitedString.isEmpty()) {
+                    args.add(OPTION_ADD_MODULES);
+                    args.add(testModuleNameCommaDelimitedString);
+
+                    args.add(OPTION_ADD_READS);
+                    args.add(mainModuleName + '=' + testModuleNameCommaDelimitedString);
+                }
+            });
 
             addPatchModuleArgument(args, mainModuleName, testSourceDirectories);
 
@@ -378,8 +383,12 @@ public class JigsawPlugin implements Plugin<Project> {
             args.add(OPTION_ADD_MODULES);
             args.add(ALL_MODULE_PATH);
 
-            args.add(OPTION_ADD_READS);
-            args.add(mainModuleName + '=' + MODULE_NAME_JUNIT);
+            final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
+
+            if (! testModuleNameCommaDelimitedString.isEmpty()) {
+                args.add(OPTION_ADD_READS);
+                args.add(mainModuleName + '=' + testModuleNameCommaDelimitedString);
+            }
 
             addPatchModuleArgument(args, mainModuleName, testOutputDir);
 
