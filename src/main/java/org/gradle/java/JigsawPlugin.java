@@ -33,7 +33,9 @@ import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.external.javadoc.CoreJavadocOptions;
 import org.gradle.jvm.application.tasks.CreateStartScripts;
 
 import java.io.File;
@@ -71,6 +73,7 @@ import static org.gradle.api.plugins.ApplicationPlugin.TASK_RUN_NAME;
 import static org.gradle.api.plugins.ApplicationPlugin.TASK_START_SCRIPTS_NAME;
 import static org.gradle.api.plugins.JavaPlugin.COMPILE_JAVA_TASK_NAME;
 import static org.gradle.api.plugins.JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME;
+import static org.gradle.api.plugins.JavaPlugin.JAVADOC_TASK_NAME;
 import static org.gradle.api.plugins.JavaPlugin.TEST_TASK_NAME;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
@@ -104,6 +107,8 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private static final String MODULE_NAME_JUNIT = "junit";
 
+    private static final String JAVADOC_TASK_OPTION_MODULE_PATH = org.gradle.java.jdk.Javadoc.OPTION_MODULE_PATH.substring(1);
+
     private static final String DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action";
 
 
@@ -135,6 +140,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 configureCompileJavaTask(    project);
                 configureCompileTestJavaTask(project);
                 configureTestTask(           project);
+                configureJavadocTask(        project);
 
                 project.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, appliedPlugin -> {
                     configureRunTask(         project);
@@ -148,6 +154,7 @@ public class JigsawPlugin implements Plugin<Project> {
         return
             task instanceof JavaCompile        ||
             task instanceof Test               ||
+            task instanceof Javadoc            ||
             task instanceof JavaExec           ||
             task instanceof CreateStartScripts
         ;
@@ -379,6 +386,23 @@ public class JigsawPlugin implements Plugin<Project> {
             test.jvmArgs(args);
 
             test.setClasspath(project.files());
+        });
+    }
+
+
+    private void configureJavadocTask(final Project project) {
+        final Javadoc javadoc = (Javadoc) project.getTasks().getByName(JAVADOC_TASK_NAME);
+
+        setModuleNameInputProperty(javadoc);
+
+        doAfterAllOtherDoFirstActions(javadoc, task -> {
+            final FileCollection classpath = javadoc.getClasspath();
+
+            if (! classpath.isEmpty()) {
+                ((CoreJavadocOptions) javadoc.getOptions()).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.getAsPath());
+
+                javadoc.setClasspath(project.files());
+            }
         });
     }
 
