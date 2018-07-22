@@ -23,7 +23,6 @@ import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
@@ -108,7 +107,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureCompileTestJavaTask(final Project project) {
         final JavaCompile compileTestJava = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
-        final SourceSet test = getSourceSets(project).getByName("test");
+        final FileCollection testSourceDirectories = getSourceSets(project).getByName("test").getJava().getSourceDirectories();
         final String moduleName = getJavaModuleName(project);
         compileTestJava.getInputs().property("moduleName", moduleName);
         compileTestJava.doFirst(task -> {
@@ -122,7 +121,7 @@ public class JigsawPlugin implements Plugin<Project> {
             args.add("--add-reads");
             args.add(moduleName + "=junit");
 
-            addPatchModuleArgument(args, moduleName, test.getJava().getSourceDirectories());
+            addPatchModuleArgument(args, moduleName, testSourceDirectories);
 
             compileTestJava.setClasspath(project.files());
         });
@@ -131,7 +130,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureTestTask(final Project project) {
         final Test testTask = (Test) project.getTasks().findByName(TEST_TASK_NAME);
-        final SourceSet test = getSourceSets(project).getByName("test");
+        final File testOutputDir = getSourceSets(project).getByName("test").getJava().getOutputDir();
         final String moduleName = getJavaModuleName(project);
         testTask.getInputs().property("moduleName", moduleName);
         testTask.doFirst(task -> {
@@ -145,7 +144,7 @@ public class JigsawPlugin implements Plugin<Project> {
             args.add("--add-reads");
             args.add(moduleName + "=junit");
 
-            addPatchModuleArgument(args, moduleName, test.getJava().getOutputDir());
+            addPatchModuleArgument(args, moduleName, testOutputDir);
 
             testTask.jvmArgs(args);
 
