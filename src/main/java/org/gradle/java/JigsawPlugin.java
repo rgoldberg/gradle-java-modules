@@ -292,6 +292,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private void configureCompileJavaTask(final Project project) {
         final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(COMPILE_JAVA_TASK_NAME);
+
         final ImmutableSet<File> outputDirFileIset =
             getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
         ;
@@ -309,7 +310,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureCompileTestJavaTask(final Project project) {
-        final JavaCompile compileTestJava = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
+        final JavaCompile    compileTestJava       = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
         final FileCollection testSourceDirectories = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories();
 
         compileTestJava.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
@@ -333,15 +334,15 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureTestTask(final Project project) {
-        final Test testTask = (Test) project.getTasks().findByName(TEST_TASK_NAME);
+        final Test test          = (Test) project.getTasks().findByName(TEST_TASK_NAME);
         final File testOutputDir = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getOutputDir();
 
-        testTask.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+        test.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
 
-        testTask.doFirst(task -> {
+        test.doFirst(task -> {
             final List<String> args = new ArrayList<>();
 
-            addModulePathArgument(args, testTask.getClasspath());
+            addModulePathArgument(args, test.getClasspath());
 
             args.add(OPTION_ADD_MODULES);
             args.add(ALL_MODULE_PATH);
@@ -351,9 +352,9 @@ public class JigsawPlugin implements Plugin<Project> {
 
             addPatchModuleArgument(args, mainModuleName, testOutputDir);
 
-            testTask.jvmArgs(args);
+            test.jvmArgs(args);
 
-            testTask.setClasspath(project.files());
+            test.setClasspath(project.files());
         });
     }
 
