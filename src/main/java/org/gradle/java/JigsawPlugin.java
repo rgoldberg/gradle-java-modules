@@ -291,7 +291,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureCompileJavaTask(final Project project) {
-        final JavaCompile compileJava = (JavaCompile) project.getTasks().findByName(COMPILE_JAVA_TASK_NAME);
+        final JavaCompile compileJava = (JavaCompile) project.getTasks().getByName(COMPILE_JAVA_TASK_NAME);
 
         final ImmutableSet<File> outputDirFileIset =
             getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
@@ -310,7 +310,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureCompileTestJavaTask(final Project project) {
-        final JavaCompile    compileTestJava       = (JavaCompile) project.getTasks().findByName(COMPILE_TEST_JAVA_TASK_NAME);
+        final JavaCompile    compileTestJava       = (JavaCompile) project.getTasks().getByName(COMPILE_TEST_JAVA_TASK_NAME);
         final FileCollection testSourceDirectories = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories();
 
         compileTestJava.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
@@ -334,7 +334,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureTestTask(final Project project) {
-        final Test test          = (Test) project.getTasks().findByName(TEST_TASK_NAME);
+        final Test test          = (Test) project.getTasks().getByName(TEST_TASK_NAME);
         final File testOutputDir = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getOutputDir();
 
         test.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
@@ -360,7 +360,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureRunTask(final Project project) {
-        final JavaExec run = (JavaExec) project.getTasks().findByName(TASK_RUN_NAME);
+        final JavaExec run = (JavaExec) project.getTasks().getByName(TASK_RUN_NAME);
 
         run.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
 
@@ -380,7 +380,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureStartScriptsTask(final Project project) {
-        final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().findByName(TASK_START_SCRIPTS_NAME);
+        final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().getByName(TASK_START_SCRIPTS_NAME);
 
         startScripts.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
 
