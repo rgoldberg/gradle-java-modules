@@ -32,6 +32,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.TaskCollection;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
@@ -68,13 +69,8 @@ import static com.google.common.collect.Iterables.addAll;
 import static com.google.common.collect.Streams.stream;
 import static com.google.common.io.MoreFiles.asCharSink;
 import static org.gradle.api.logging.Logging.getLogger;
-import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_PLUGIN_NAME;
-import static org.gradle.api.plugins.ApplicationPlugin.TASK_RUN_NAME;
-import static org.gradle.api.plugins.ApplicationPlugin.TASK_START_SCRIPTS_NAME;
 import static org.gradle.api.plugins.JavaPlugin.COMPILE_JAVA_TASK_NAME;
 import static org.gradle.api.plugins.JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME;
-import static org.gradle.api.plugins.JavaPlugin.JAVADOC_TASK_NAME;
-import static org.gradle.api.plugins.JavaPlugin.TEST_TASK_NAME;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
 import static org.gradle.java.jdk.Javac.ALL_MODULE_PATH;
@@ -136,15 +132,11 @@ public class JigsawPlugin implements Plugin<Project> {
             mainModuleName = getMainModuleName(project);
 
             if (mainModuleName != null) {
-                configureCompileJavaTask(    project);
-                configureCompileTestJavaTask(project);
-                configureTestTask(           project);
-                configureJavadocTask(        project);
-
-                project.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, appliedPlugin -> {
-                    configureRunTask(         project);
-                    configureStartScriptsTask(project);
-                });
+                configureJavaCompileTasks(       project);
+                configureTestTasks(              project);
+                configureJavadocTasks(           project);
+                configureJavaExecTasks(          project);
+                configureCreateStartScriptsTasks(project);
             }
         });
     }
@@ -320,32 +312,41 @@ public class JigsawPlugin implements Plugin<Project> {
     }
 
 
-    private void configureCompileJavaTask(final Project project) {
-        final JavaCompile compileJava = (JavaCompile) project.getTasks().getByName(COMPILE_JAVA_TASK_NAME);
+    private void configureJavaCompileTasks(final Project project) {
+        final TaskCollection<JavaCompile> javaCompileTaskCollection = project.getTasks().withType(JavaCompile.class);
 
-        final ImmutableSet<File> outputDirFileIset =
-            getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
-        ;
+        if (! javaCompileTaskCollection.isEmpty()) {
+            final ImmutableSet<File> outputDirFileIset =
+                getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
+            ;
 
-        doAfterAllOtherDoFirstActions(compileJava, task -> {
-            final List<String> args = compileJava.getOptions().getCompilerArgs();
-
-            addModulePathArgument(args, compileJava.getClasspath().filter(f -> ! outputDirFileIset.contains(f)));
-
-            addPatchModuleArgument(args, mainModuleName, compileJava.getClasspath().filter(outputDirFileIset::contains));
-
-            compileJava.setClasspath(project.files());
-        });
+            javaCompileTaskCollection.forEach(javaCompile -> configureJavaCompileTask(javaCompile, outputDirFileIset));
+        }
     }
 
+    private void configureJavaCompileTask(final JavaCompile javaCompile, final ImmutableSet<File> outputDirFileIset) {
+        if (COMPILE_TEST_JAVA_TASK_NAME.equals(javaCompile.getName())) {
+            configureCompileTestJavaTask(javaCompile);
+        }
+        else {
+            doAfterAllOtherDoFirstActions(javaCompile, task -> {
+                final List<String> args = javaCompile.getOptions().getCompilerArgs();
 
-    private void configureCompileTestJavaTask(final Project project) {
-        final JavaCompile    compileTestJava       = (JavaCompile) project.getTasks().getByName(COMPILE_TEST_JAVA_TASK_NAME);
-        final FileCollection testSourceDirectories = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories();
+                addModulePathArgument(args, javaCompile.getClasspath().filter(f -> ! outputDirFileIset.contains(f)));
 
+                addPatchModuleArgument(args, mainModuleName, javaCompile.getClasspath().filter(outputDirFileIset::contains));
+
+                javaCompile.setClasspath(javaCompile.getProject().files());
+            });
+        }
+    }
+
+    private void configureCompileTestJavaTask(final JavaCompile compileTestJava) {
         setModuleNameInputProperty(compileTestJava);
 
         doAfterAllOtherDoFirstActions(compileTestJava, task -> {
+            final Project project = compileTestJava.getProject();
+
             final List<String> args = compileTestJava.getOptions().getCompilerArgs();
 
             addModulePathArgument(args, compileTestJava.getClasspath());
@@ -362,20 +363,23 @@ public class JigsawPlugin implements Plugin<Project> {
                 }
             });
 
-            addPatchModuleArgument(args, mainModuleName, testSourceDirectories);
+            addPatchModuleArgument(args, mainModuleName, getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories());
 
             compileTestJava.setClasspath(project.files());
         });
     }
 
 
-    private void configureTestTask(final Project project) {
-        final Test test          = (Test) project.getTasks().getByName(TEST_TASK_NAME);
-        final File testOutputDir = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getOutputDir();
+    private void configureTestTasks(final Project project) {
+        project.getTasks().withType(Test.class).forEach(test -> configureTestTask(test));
+    }
 
+    private void configureTestTask(final Test test) {
         setModuleNameInputProperty(test);
 
         doAfterAllOtherDoFirstActions(test, task -> {
+            final Project project = test.getProject();
+
             final List<String> args = new ArrayList<>();
 
             addModulePathArgument(args, test.getClasspath());
@@ -390,7 +394,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add(mainModuleName + '=' + testModuleNameCommaDelimitedString);
             }
 
-            addPatchModuleArgument(args, mainModuleName, testOutputDir);
+            addPatchModuleArgument(args, mainModuleName, getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getOutputDir());
 
             test.jvmArgs(args);
 
@@ -399,9 +403,11 @@ public class JigsawPlugin implements Plugin<Project> {
     }
 
 
-    private void configureJavadocTask(final Project project) {
-        final Javadoc javadoc = (Javadoc) project.getTasks().getByName(JAVADOC_TASK_NAME);
+    private void configureJavadocTasks(final Project project) {
+        project.getTasks().withType(Javadoc.class).forEach(javadoc -> configureJavadocTask(javadoc));
+    }
 
+    private void configureJavadocTask(final Javadoc javadoc) {
         setModuleNameInputProperty(javadoc);
 
         doAfterAllOtherDoFirstActions(javadoc, task -> {
@@ -410,56 +416,60 @@ public class JigsawPlugin implements Plugin<Project> {
             if (! classpath.isEmpty()) {
                 ((CoreJavadocOptions) javadoc.getOptions()).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.getAsPath());
 
-                javadoc.setClasspath(project.files());
+                javadoc.setClasspath(javadoc.getProject().files());
             }
         });
     }
 
 
-    private void configureRunTask(final Project project) {
-        final JavaExec run = (JavaExec) project.getTasks().getByName(TASK_RUN_NAME);
+    private void configureJavaExecTasks(final Project project) {
+        project.getTasks().withType(JavaExec.class).forEach(javaExec -> configureJavaExecTask(javaExec));
+    }
 
-        setModuleNameInputProperty(run);
+    private void configureJavaExecTask(final JavaExec javaExec) {
+        setModuleNameInputProperty(javaExec);
 
-        doAfterAllOtherDoFirstActions(run, task -> {
+        doAfterAllOtherDoFirstActions(javaExec, task -> {
             final List<String> args = new ArrayList<>();
 
-            addModulePathArgument(args, run.getClasspath());
+            addModulePathArgument(args, javaExec.getClasspath());
 
             args.add(OPTION_MODULE);
-            args.add(mainModuleName + '/' + run.getMain());
+            args.add(mainModuleName + '/' + javaExec.getMain());
 
-            run.jvmArgs(args);
-            run.setMain("");
-            run.setClasspath(project.files());
+            javaExec.jvmArgs(args);
+            javaExec.setMain("");
+            javaExec.setClasspath(javaExec.getProject().files());
         });
     }
 
 
-    private void configureStartScriptsTask(final Project project) {
-        final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().getByName(TASK_START_SCRIPTS_NAME);
+    private void configureCreateStartScriptsTasks(final Project project) {
+        project.getTasks().withType(CreateStartScripts.class).forEach(css -> configureCreateStartScriptsTask(css));
+    }
 
-        setModuleNameInputProperty(startScripts);
+    private void configureCreateStartScriptsTask(final CreateStartScripts createStartScripts) {
+        setModuleNameInputProperty(createStartScripts);
 
-        doAfterAllOtherDoFirstActions(startScripts, task -> {
+        doAfterAllOtherDoFirstActions(createStartScripts, task -> {
             final List<String> args = new ArrayList<>();
 
-            addAll(args, startScripts.getDefaultJvmOpts());
+            addAll(args, createStartScripts.getDefaultJvmOpts());
 
             args.add(OPTION_MODULE_PATH);
             args.add(LIB_DIR_PLACEHOLDER);
 
             args.add(OPTION_MODULE);
-            args.add(mainModuleName + '/' + startScripts.getMainClassName());
+            args.add(mainModuleName + '/' + createStartScripts.getMainClassName());
 
-            startScripts.setDefaultJvmOpts(args);
-            startScripts.setMainClassName("");
-            startScripts.setClasspath(project.files());
+            createStartScripts.setDefaultJvmOpts(args);
+            createStartScripts.setMainClassName("");
+            createStartScripts.setClasspath(createStartScripts.getProject().files());
         });
 
-        startScripts.doLast(task -> {
-            replaceLibDirectoryPlaceholder(startScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
-            replaceLibDirectoryPlaceholder(startScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
+        createStartScripts.doLast(task -> {
+            replaceLibDirectoryPlaceholder(createStartScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
+            replaceLibDirectoryPlaceholder(createStartScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
         });
     }
 
