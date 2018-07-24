@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
@@ -102,6 +103,11 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private String mainModuleName;
+
+
+    private void setModuleNameInputProperty(final Task task) {
+        task.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+    }
 
 
     @Override
@@ -313,7 +319,7 @@ public class JigsawPlugin implements Plugin<Project> {
         final JavaCompile    compileTestJava       = (JavaCompile) project.getTasks().getByName(COMPILE_TEST_JAVA_TASK_NAME);
         final FileCollection testSourceDirectories = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories();
 
-        compileTestJava.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+        setModuleNameInputProperty(compileTestJava);
 
         compileTestJava.doFirst(task -> {
             final List<String> args = compileTestJava.getOptions().getCompilerArgs();
@@ -337,7 +343,7 @@ public class JigsawPlugin implements Plugin<Project> {
         final Test test          = (Test) project.getTasks().getByName(TEST_TASK_NAME);
         final File testOutputDir = getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getOutputDir();
 
-        test.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+        setModuleNameInputProperty(test);
 
         test.doFirst(task -> {
             final List<String> args = new ArrayList<>();
@@ -362,7 +368,7 @@ public class JigsawPlugin implements Plugin<Project> {
     private void configureRunTask(final Project project) {
         final JavaExec run = (JavaExec) project.getTasks().getByName(TASK_RUN_NAME);
 
-        run.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+        setModuleNameInputProperty(run);
 
         run.doFirst(task -> {
             final List<String> args = new ArrayList<>();
@@ -382,7 +388,7 @@ public class JigsawPlugin implements Plugin<Project> {
     private void configureStartScriptsTask(final Project project) {
         final CreateStartScripts startScripts = (CreateStartScripts) project.getTasks().getByName(TASK_START_SCRIPTS_NAME);
 
-        startScripts.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+        setModuleNameInputProperty(startScripts);
 
         startScripts.doFirst(task -> {
             final List<String> args = new ArrayList<>();
