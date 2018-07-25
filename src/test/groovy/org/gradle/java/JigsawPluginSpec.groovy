@@ -49,7 +49,7 @@ dependencies {
   testImplementation("junit", "junit", "4.12")
 }
 
-application.mainClassName = "com.example.AClass"
+application.mainClassName = "test.module/com.example.AClass"
 '''
 
         tmpDir.newFile('settings.gradle.kts') << '''\

@@ -20,7 +20,11 @@ import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.ast.CompilationUnit;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import org.gradle.api.Action;
 import org.gradle.api.Describable;
 import org.gradle.api.GradleException;
@@ -31,8 +35,9 @@ import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.JavaExec;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.TaskCollection;
+import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
@@ -41,11 +46,16 @@ import org.gradle.jvm.application.tasks.CreateStartScripts;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -64,13 +74,13 @@ import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_6;
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_7;
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_8;
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_9;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
 import static com.google.common.collect.Iterables.addAll;
+import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.collect.Streams.stream;
 import static com.google.common.io.MoreFiles.asCharSink;
 import static org.gradle.api.logging.Logging.getLogger;
-import static org.gradle.api.plugins.JavaPlugin.COMPILE_JAVA_TASK_NAME;
-import static org.gradle.api.plugins.JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
 import static org.gradle.java.jdk.Javac.ALL_MODULE_PATH;
@@ -86,9 +96,15 @@ import static org.gradle.java.testing.StandardTestFrameworkModuleInfo.getTestMod
 import static org.gradle.util.TextUtil.getUnixLineSeparator;
 import static org.gradle.util.TextUtil.getWindowsLineSeparator;
 
+import static java.io.File.pathSeparator;
+import static java.lang.Character.toLowerCase;
+import static java.lang.String.join;
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.Files.isDirectory;
+import static java.nio.file.Files.newDirectoryStream;
 import static java.nio.file.Files.readAllLines;
+import static java.util.Comparator.naturalOrder;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Stream.concat;
@@ -97,41 +113,55 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private static final Logger LOGGER = getLogger(JigsawPlugin.class);
 
+    private static final String LS = lineSeparator();
+
+    private static final Joiner LINE_JOINER = Joiner.on(LS);
+    private static final Joiner PATH_JOINER = Joiner.on(pathSeparator);
+
     private static final String  LIB_DIR_PLACEHOLDER         = "LIB_DIR_PLACEHOLDER";
     private static final Pattern LIB_DIR_PLACEHOLDER_PATTERN = compile(LIB_DIR_PLACEHOLDER);
 
-    private static final String PROPERTY_NAME_MODULE_NAME = "moduleName";
+    private static final String PROPERTY_NAME_MODULE_NAMES = "moduleNames";
 
     private static final String JAVADOC_TASK_OPTION_MODULE_PATH = org.gradle.java.jdk.Javadoc.OPTION_MODULE_PATH.substring(1);
+
+    private static final String VERB_COMPILE = "compile";
+
+    private static final String TARGET_JAVA = "Java";
 
     private static final String DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action";
 
 
-    private String mainModuleName;
+    private ImmutableMap<String, ImmutableMap<Path, String>> moduleNameIbyModuleInfoJavaPath_IbySourceSetName;
+
+    private ImmutableSortedSet<String> moduleNameIsset;
 
 
-    private void setModuleNameInputProperty(final Task task) {
-        task.getInputs().property(PROPERTY_NAME_MODULE_NAME, mainModuleName);
+    private void setModuleNamesInputProperty(final Task task) {
+        setModuleNamesInputProperty(task, join(",", moduleNameIsset));
     }
 
 
     @Override
     public void apply(final Project project) {
         LOGGER.debug("Applying JigsawPlugin to {}", project.getName());
+
         project.getPlugins().apply(JavaPlugin.class);
-        configureJavaTasks(project);
-    }
 
-
-    private void configureJavaTasks(final Project project) {
         project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
             if (taskExecutionGraph.getAllTasks().stream().noneMatch(task -> project.equals(task.getProject()) && isSupportedTask(task))) {
                 return;
             }
 
-            mainModuleName = getMainModuleName(project);
+            parseModuleInfoJavas(project);
 
-            if (mainModuleName != null) {
+            if (! moduleNameIbyModuleInfoJavaPath_IbySourceSetName.isEmpty()) {
+                moduleNameIsset =
+                    moduleNameIbyModuleInfoJavaPath_IbySourceSetName.values().stream()
+                    .flatMap(entry -> entry.values().stream())
+                    .collect(toImmutableSortedSet(naturalOrder()))
+                ;
+
                 configureJavaCompileTasks(       project);
                 configureTestTasks(              project);
                 configureJavadocTasks(           project);
@@ -152,46 +182,55 @@ public class JigsawPlugin implements Plugin<Project> {
     }
 
 
-    private String getMainModuleName(final Project project) {
-        final JavaParser parser =
-            new JavaParser(new ParserConfiguration().setLanguageLevel(getLanguageLevel((JavaCompile) project.getTasks().getByName(COMPILE_JAVA_TASK_NAME))))
+    private void parseModuleInfoJavas(final Project project) {
+        final SortedMap<String, SortedMap<Path, String>> moduleNameSbyModuleInfoJavaPath_SbySourceSetName = new TreeMap<>();
+
+        getSourceSets(project).stream()
+        .flatMap(sourceSet ->
+            stream(sourceSet.getAllJava().matching(pattern -> pattern.include("**/" + FILE_NAME_MODULE_INFO_JAVA)))
+            .map(moduleInfoJavaFile -> immutableEntry(sourceSet, moduleInfoJavaFile.toPath()))
+        )
+        .forEach(moduleInfoJavaPathIforSourceSet -> {
+            final Path moduleInfoJavaPath = moduleInfoJavaPathIforSourceSet.getValue();
+            try {
+                final SourceSet sourceSet = moduleInfoJavaPathIforSourceSet.getKey();
+
+                final ParseResult<CompilationUnit> parseResult =
+                    new JavaParser(new ParserConfiguration().setLanguageLevel(getLanguageLevel(getJavaCompile(project.getTasks(), sourceSet))))
+                    .parse(moduleInfoJavaPath)
+                ;
+
+                if (! parseResult.isSuccessful()) {
+                    throw new GradleException(
+                        concat(
+                            Stream.of(
+                                "Couldn't parse Java module name from:",
+                                "",
+                                moduleInfoJavaPath.toString(),
+                                "",
+                                "Because of the following parse problems:",
+                                ""
+                            ),
+                            parseResult.getProblems().stream().map(Object::toString)
+                        )
+                        .collect(joining(lineSeparator()))
+                    );
+                }
+
+                moduleNameSbyModuleInfoJavaPath_SbySourceSetName.computeIfAbsent(sourceSet.getName(), k -> new TreeMap<>()).put(
+                    moduleInfoJavaPath,
+                    parseResult.getResult().get().getModule().orElseThrow(GradleException::new).getName().asString()
+                );
+            }
+            catch (final IOException ex) {
+                throw new GradleException("Couldn't parse Java module name from " + moduleInfoJavaPath, ex);
+            }
+        });
+
+        moduleNameIbyModuleInfoJavaPath_IbySourceSetName =
+            moduleNameSbyModuleInfoJavaPath_SbySourceSetName.entrySet().stream()
+            .collect(toImmutableMap(Entry::getKey, e -> ImmutableMap.copyOf(e.getValue())))
         ;
-
-        for (final File sourceDir : getSourceSets(project).getByName(MAIN_SOURCE_SET_NAME).getJava().getSrcDirs()) {
-            final String moduleName = parseModuleName(sourceDir.toPath().resolve(FILE_NAME_MODULE_INFO_JAVA), parser);
-            if (moduleName != null) {
-                return moduleName;
-            }
-        }
-
-        return null;
-    }
-
-    private String parseModuleName(final Path moduleInfoJavaPath, final JavaParser parser) {
-        try {
-            final ParseResult<CompilationUnit> parseResult = parser.parse(moduleInfoJavaPath);
-            if (parseResult.isSuccessful()) {
-                return parseResult.getResult().get().getModule().map(module -> module.getName().asString()).orElseThrow(GradleException::new);
-            }
-
-            throw new GradleException(
-                concat(
-                    Stream.of(
-                        "Couldn't parse Java module name from:",
-                        "",
-                        moduleInfoJavaPath.toString(),
-                        "",
-                        "Because of the following parse problems:",
-                        ""
-                    ),
-                    parseResult.getProblems().stream().map(Object::toString)
-                )
-                .collect(joining(lineSeparator()))
-            );
-        }
-        catch (final IOException ex) {
-            throw new GradleException("Couldn't parse Java module name from " + moduleInfoJavaPath, ex);
-        }
     }
 
     private static LanguageLevel getLanguageLevel(final JavaCompile javaCompile) {
@@ -313,34 +352,33 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureJavaCompileTasks(final Project project) {
-        final TaskCollection<JavaCompile> javaCompileTaskCollection = project.getTasks().withType(JavaCompile.class);
-
-        if (! javaCompileTaskCollection.isEmpty()) {
-            final ImmutableSet<File> outputDirFileIset =
-                getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
-            ;
-
-            javaCompileTaskCollection.forEach(javaCompile -> configureJavaCompileTask(javaCompile, outputDirFileIset));
-        }
+        project.getTasks().withType(JavaCompile.class).forEach(this::configureJavaCompileTask);
     }
 
-    private void configureJavaCompileTask(final JavaCompile javaCompile, final ImmutableSet<File> outputDirFileIset) {
-        if (COMPILE_TEST_JAVA_TASK_NAME.equals(javaCompile.getName())) {
-            configureCompileTestJavaTask(javaCompile);
+    private void configureJavaCompileTask(final JavaCompile javaCompile) {
+        final String sourceSetName = getSourceSetName(javaCompile);
+
+        final ImmutableMap<Path, String> moduleNameIbyModuleInfoJavaPath =
+            moduleNameIbyModuleInfoJavaPath_IbySourceSetName.getOrDefault(sourceSetName, ImmutableMap.of())
+        ;
+
+        if (moduleNameIbyModuleInfoJavaPath.isEmpty()) {
+            //TODO: use better heuristic to determine if javaCompile is for test code
+            if (TEST_SOURCE_SET_NAME.equals(sourceSetName)) {
+                // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
+                configureCompileTestJavaTask(javaCompile);
+            }
         }
         else {
+            // source set contains at least one module-info.java
             doAfterAllOtherDoFirstActions(javaCompile, task ->
-                configureJavaCompileTask(
-                    javaCompile,
-                    javaCompile.getClasspath().filter(f -> ! outputDirFileIset.contains(f)),
-                    javaCompile.getClasspath().filter(outputDirFileIset::contains)
-                )
+                configureJavaCompileTask(javaCompile, moduleNameIbyModuleInfoJavaPath.values(), javaCompile.getClasspath())
             );
         }
     }
 
     private void configureCompileTestJavaTask(final JavaCompile compileTestJava) {
-        setModuleNameInputProperty(compileTestJava);
+        setModuleNamesInputProperty(compileTestJava);
 
         doAfterAllOtherDoFirstActions(compileTestJava, task -> {
             final Project project = compileTestJava.getProject();
@@ -348,8 +386,8 @@ public class JigsawPlugin implements Plugin<Project> {
             final List<String> args =
                 configureJavaCompileTask(
                     compileTestJava,
-                    compileTestJava.getClasspath(),
-                    getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories()
+                    moduleNameIsset,
+                    compileTestJava.getClasspath().plus(getSourceSet(project, TEST_SOURCE_SET_NAME).getAllJava().getSourceDirectories())
                 )
             ;
 
@@ -360,23 +398,23 @@ public class JigsawPlugin implements Plugin<Project> {
                     args.add(OPTION_ADD_MODULES);
                     args.add(testModuleNameCommaDelimitedString);
 
-                    args.add(OPTION_ADD_READS);
-                    args.add(mainModuleName + '=' + testModuleNameCommaDelimitedString);
+                    moduleNameIsset.forEach(moduleName -> {
+                        args.add(OPTION_ADD_READS);
+                        args.add(moduleName + '=' + testModuleNameCommaDelimitedString);
+                    });
                 }
             });
         });
     }
 
     private List<String> configureJavaCompileTask(
-        final JavaCompile    javaCompile,
-        final FileCollection modulePathFileCollection,
-        final FileCollection patchModuleFileCollection
+        final JavaCompile                 javaCompile,
+        final ImmutableCollection<String> moduleNameIcoll,
+        final FileCollection              classpath
     ) {
         final List<String> args = javaCompile.getOptions().getCompilerArgs();
 
-        addModulePathArgument(args, modulePathFileCollection);
-
-        addPatchModuleArgument(args, mainModuleName, patchModuleFileCollection);
+        addModuleArguments(args, moduleNameIcoll, classpath.getFiles());
 
         javaCompile.setClasspath(javaCompile.getProject().files());
 
@@ -385,18 +423,18 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureTestTasks(final Project project) {
-        project.getTasks().withType(Test.class).forEach(test -> configureTestTask(test));
+        project.getTasks().withType(Test.class).forEach(this::configureTestTask);
     }
 
     private void configureTestTask(final Test test) {
-        setModuleNameInputProperty(test);
+        setModuleNamesInputProperty(test);
 
         doAfterAllOtherDoFirstActions(test, task -> {
             final Project project = test.getProject();
 
             final List<String> args = new ArrayList<>();
 
-            addModulePathArgument(args, test.getClasspath());
+            addModuleArguments(args, moduleNameIsset, test.getClasspath().getFiles());
 
             args.add(OPTION_ADD_MODULES);
             args.add(ALL_MODULE_PATH);
@@ -404,11 +442,11 @@ public class JigsawPlugin implements Plugin<Project> {
             final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
 
             if (! testModuleNameCommaDelimitedString.isEmpty()) {
-                args.add(OPTION_ADD_READS);
-                args.add(mainModuleName + '=' + testModuleNameCommaDelimitedString);
+                moduleNameIsset.forEach(moduleName -> {
+                    args.add(OPTION_ADD_READS);
+                    args.add(moduleName + '=' + testModuleNameCommaDelimitedString);
+                });
             }
-
-            addPatchModuleArgument(args, mainModuleName, getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getOutputDir());
 
             test.jvmArgs(args);
 
@@ -418,11 +456,11 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureJavadocTasks(final Project project) {
-        project.getTasks().withType(Javadoc.class).forEach(javadoc -> configureJavadocTask(javadoc));
+        project.getTasks().withType(Javadoc.class).forEach(this::configureJavadocTask);
     }
 
     private void configureJavadocTask(final Javadoc javadoc) {
-        setModuleNameInputProperty(javadoc);
+        setModuleNamesInputProperty(javadoc);
 
         doAfterAllOtherDoFirstActions(javadoc, task -> {
             final FileCollection classpath = javadoc.getClasspath();
@@ -437,54 +475,86 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureJavaExecTasks(final Project project) {
-        project.getTasks().withType(JavaExec.class).forEach(javaExec -> configureJavaExecTask(javaExec));
+        project.getTasks().withType(JavaExec.class).forEach(this::configureJavaExecTask);
     }
 
     private void configureJavaExecTask(final JavaExec javaExec) {
-        setModuleNameInputProperty(javaExec);
+        final String main       = javaExec.getMain();
+        final String moduleName = getModuleName(main);
 
-        doAfterAllOtherDoFirstActions(javaExec, task -> {
-            final List<String> args = new ArrayList<>();
+        if (moduleName != null) {
+            setModuleNamesInputProperty(javaExec, moduleName);
 
-            addModulePathArgument(args, javaExec.getClasspath());
+            doAfterAllOtherDoFirstActions(javaExec, task -> {
+                final List<String> args = new ArrayList<>();
 
-            args.add(OPTION_MODULE);
-            args.add(mainModuleName + '/' + javaExec.getMain());
+                addModuleArguments(args, ImmutableSet.of(moduleName), javaExec.getClasspath().getFiles());
 
-            javaExec.jvmArgs(args);
-            javaExec.setMain("");
-            javaExec.setClasspath(javaExec.getProject().files());
-        });
+                args.add(OPTION_MODULE);
+                args.add(main);
+
+                javaExec.jvmArgs(args);
+                javaExec.setMain("");
+                javaExec.setClasspath(javaExec.getProject().files());
+            });
+        }
+    }
+
+    private String getModuleName(final String main) {
+        final int slashIndex = main.indexOf('/');
+        return
+            slashIndex >= 0
+                // build script specified module/class
+                ? main.substring(0, slashIndex)
+                : moduleNameIsset.contains(main)
+                    // build script specified module that is built in this build
+                    ? main
+                    // couldn't find module/class or module, so use non-modular command line
+                    : null
+        ;
+
+        //TODO: check jars in classpath for modules, possibly from:
+        //    module-info.class
+        //    Automatic-Module-Name in META-INF/MANIFEST.MF
+        //    jar file name
+        //TODO: check directories in classpath for modules, possibly from:
+        //    Automatic-Module-Name in META-INF/MANIFEST.MF
+        //    directory name
     }
 
 
     private void configureCreateStartScriptsTasks(final Project project) {
-        project.getTasks().withType(CreateStartScripts.class).forEach(css -> configureCreateStartScriptsTask(css));
+        project.getTasks().withType(CreateStartScripts.class).forEach(this::configureCreateStartScriptsTask);
     }
 
     private void configureCreateStartScriptsTask(final CreateStartScripts createStartScripts) {
-        setModuleNameInputProperty(createStartScripts);
+        final String main       = createStartScripts.getMainClassName();
+        final String moduleName = getModuleName(main);
 
-        doAfterAllOtherDoFirstActions(createStartScripts, task -> {
-            final List<String> args = new ArrayList<>();
+        if (moduleName != null) {
+            setModuleNamesInputProperty(createStartScripts, moduleName);
 
-            addAll(args, createStartScripts.getDefaultJvmOpts());
+            doAfterAllOtherDoFirstActions(createStartScripts, task -> {
+                final List<String> args = new ArrayList<>();
 
-            args.add(OPTION_MODULE_PATH);
-            args.add(LIB_DIR_PLACEHOLDER);
+                addAll(args, createStartScripts.getDefaultJvmOpts());
 
-            args.add(OPTION_MODULE);
-            args.add(mainModuleName + '/' + createStartScripts.getMainClassName());
+                args.add(OPTION_MODULE_PATH);
+                args.add(LIB_DIR_PLACEHOLDER);
 
-            createStartScripts.setDefaultJvmOpts(args);
-            createStartScripts.setMainClassName("");
-            createStartScripts.setClasspath(createStartScripts.getProject().files());
-        });
+                args.add(OPTION_MODULE);
+                args.add(main);
 
-        createStartScripts.doLast(task -> {
-            replaceLibDirectoryPlaceholder(createStartScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
-            replaceLibDirectoryPlaceholder(createStartScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
-        });
+                createStartScripts.setDefaultJvmOpts(args);
+                createStartScripts.setMainClassName("");
+                createStartScripts.setClasspath(createStartScripts.getProject().files());
+            });
+
+            createStartScripts.doLast(task -> {
+                replaceLibDirectoryPlaceholder(createStartScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
+                replaceLibDirectoryPlaceholder(createStartScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
+            });
+        }
     }
 
     private void replaceLibDirectoryPlaceholder(final Path path, final String libDirReplacement, final String lineSeparator) {
@@ -543,23 +613,125 @@ public class JigsawPlugin implements Plugin<Project> {
         return project.getExtensions().getByType(SourceSetContainer.class);
     }
 
+    private static SourceSet getSourceSet(final JavaCompile javaCompile) {
+        return getCompileSourceSet(javaCompile, TARGET_JAVA);
+    }
 
-    private void addModulePathArgument(final List<String> args, final FileCollection modulePathFileCollection) {
-        if (! modulePathFileCollection.isEmpty()) {
-            args.add(OPTION_MODULE_PATH);
-            args.add(modulePathFileCollection.getAsPath());
+    private static SourceSet getCompileSourceSet(final Task task, final String target) {
+        return getSourceSet(task, VERB_COMPILE, target);
+    }
+
+    private static SourceSet getSourceSet(final Task task, final String verb, final String target) {
+        return getSourceSet(task.getProject(), task.getName(), verb, target);
+    }
+
+    private static SourceSet getSourceSet(final Project project, final String taskName, final String verb, final String target) {
+        return getSourceSet(project, getSourceSetName(taskName, verb, target));
+    }
+
+    private static SourceSet getSourceSet(final Project project, final String sourceSetName) {
+        return getSourceSets(project).getByName(sourceSetName);
+    }
+
+
+    private static String getSourceSetName(final JavaCompile javaCompile) {
+        return getCompileSourceSetName(javaCompile, TARGET_JAVA);
+    }
+
+    private static String getCompileSourceSetName(final Task task, final String target) {
+        return getSourceSetName(task, VERB_COMPILE, target);
+    }
+
+    private static String getSourceSetName(final Task task, final String verb, final String target) {
+        return getSourceSetName(task.getName(), verb, target);
+    }
+
+    private static String getSourceSetName(final String taskName, final String verb, final String target) {
+        final int taskNameLength   = taskName.length();
+        final int verbLength       = verb.length();
+        final int targetLength     = target.length();
+        final int verbTargetLength = verbLength + targetLength;
+
+        if (taskNameLength == verbTargetLength) {
+            return MAIN_SOURCE_SET_NAME;
+        }
+        else {
+            final StringBuilder sb = new StringBuilder(taskNameLength - verbTargetLength);
+            sb.append(toLowerCase(taskName.charAt(verbLength)));
+            sb.append(taskName, verbLength + 1, taskNameLength - targetLength);
+            return sb.toString();
         }
     }
 
-    private void addPatchModuleArgument(final List<String> args, final String moduleName, final File file) {
-        args.add(OPTION_PATCH_MODULE);
-        args.add(moduleName + '=' + file);
+
+    private static JavaCompile getJavaCompile(final TaskContainer tasks, final SourceSet sourceSet) {
+        return (JavaCompile) tasks.getByName(sourceSet.getCompileJavaTaskName());
     }
 
-    private void addPatchModuleArgument(final List<String> args, final String moduleName, final FileCollection patchModuleFileCollection) {
-        if (! patchModuleFileCollection.isEmpty()) {
+
+    private void setModuleNamesInputProperty(final Task task, final String moduleNamesCommaDelimited) {
+        task.getInputs().property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited);
+    }
+
+
+    private static void addModuleArguments(final List<String> args, final ImmutableCollection<String> moduleNameIcoll, final Set<File> classpathFileSet) {
+        // determine which classpath elements will be in --module-path, and which in --patch-module
+        final int classpathFileCount = classpathFileSet.size();
+
+        final List<File>  modulePathFileList = new ArrayList<>(classpathFileCount);
+        final List<File> patchModuleFileList = new ArrayList<>(classpathFileCount);
+
+        for (final File classpathFile : classpathFileSet) {
+            final Path classpathPath = classpathFile.toPath();
+            if (
+                isDirectory(classpathPath) &&
+                ! containsModules(classpathPath)
+            ) {
+                // directories that don't contain module-info.class or *.jar files
+                patchModuleFileList.add(classpathFile);
+            }
+            else {
+                // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
+                modulePathFileList.add(classpathFile);
+            }
+        }
+
+        // add module arguments
+        if (! modulePathFileList.isEmpty()) {
+            args.add(OPTION_MODULE_PATH);
+            args.add(PATH_JOINER.join(modulePathFileList));
+        }
+
+        if (! patchModuleFileList.isEmpty()) {
+            if (moduleNameIcoll.size() > 1) {
+                throw new GradleException(
+                    "Cannot determine into which of the multiple modules to patch the non-module directories."                             + LS + LS
+                    + "To avoid this problem, either only have one module per source set, or modularize the currently non-modular source." + LS + LS
+                    + "Modules:"                                                    + LS + LS + LINE_JOINER.join(moduleNameIcoll)          + LS + LS
+                    + "Directories containing non-modular source and/or resources:" + LS + LS + LINE_JOINER.join(patchModuleFileList)
+                );
+            }
+
+            // moduleNameIcoll is guaranteed to have exactly one element
+            final String moduleName = moduleNameIcoll.iterator().next();
+
+            int sbLength = moduleName.length() + patchModuleFileList.size();
+
+            for (final File patchModuleFile : patchModuleFileList) {
+                sbLength += patchModuleFile.toString().length();
+            }
+
             args.add(OPTION_PATCH_MODULE);
-            args.add(moduleName + '=' + patchModuleFileCollection.getAsPath());
+            args.add(PATH_JOINER.appendTo(new StringBuilder(sbLength).append(moduleName).append('='), patchModuleFileList).toString());
+        }
+    }
+
+    private static boolean containsModules(final Path dirPath) {
+        try (DirectoryStream<Path> ds = newDirectoryStream(dirPath, "{module-info.class,*.jar}")) {
+            return ds.iterator().hasNext();
+        }
+        catch (final IOException ex) {
+            throw new GradleException("Could not determine if directory contains modules: " + dirPath, ex);
         }
     }
 }
