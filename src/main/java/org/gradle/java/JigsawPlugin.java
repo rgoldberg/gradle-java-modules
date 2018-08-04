@@ -111,6 +111,7 @@ import static java.util.stream.Stream.concat;
 
 public class JigsawPlugin implements Plugin<Project> {
 
+    //<editor-fold desc="Constants">
     private static final Logger LOGGER = getLogger(JigsawPlugin.class);
 
     private static final String LS = lineSeparator();
@@ -130,18 +131,24 @@ public class JigsawPlugin implements Plugin<Project> {
     private static final String TARGET_JAVA = "Java";
 
     private static final String DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action";
+    //</editor-fold>
 
 
+    //<editor-fold desc="Fields">
     private ImmutableMap<String, ImmutableMap<Path, String>> moduleNameIbyModuleInfoJavaPath_IbySourceSetName;
 
     private ImmutableSortedSet<String> moduleNameIsset;
+    //</editor-fold>
 
 
+    //<editor-fold desc="Accessors">
     private void setModuleNamesInputProperty(final Task task) {
         setModuleNamesInputProperty(task, join(",", moduleNameIsset));
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="Plugin methods">
     @Override
     public void apply(final Project project) {
         LOGGER.debug("Applying JigsawPlugin to {}", project.getName());
@@ -180,8 +187,10 @@ public class JigsawPlugin implements Plugin<Project> {
             task instanceof CreateStartScripts
         ;
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="module-info.java parsing methods">
     private void parseModuleInfoJavas(final Project project) {
         final SortedMap<String, SortedMap<Path, String>> moduleNameSbyModuleInfoJavaPath_SbySourceSetName = new TreeMap<>();
 
@@ -349,8 +358,10 @@ public class JigsawPlugin implements Plugin<Project> {
 
         return null;
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="JavaCompile configuration methods">
     private void configureJavaCompileTasks(final Project project) {
         project.getTasks().withType(JavaCompile.class).forEach(this::configureJavaCompileTask);
     }
@@ -420,8 +431,10 @@ public class JigsawPlugin implements Plugin<Project> {
 
         return args;
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="Test configuration methods">
     private void configureTestTasks(final Project project) {
         project.getTasks().withType(Test.class).forEach(this::configureTestTask);
     }
@@ -453,8 +466,10 @@ public class JigsawPlugin implements Plugin<Project> {
             test.setClasspath(project.files());
         });
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="Javadoc configuration methods">
     private void configureJavadocTasks(final Project project) {
         project.getTasks().withType(Javadoc.class).forEach(this::configureJavadocTask);
     }
@@ -472,8 +487,10 @@ public class JigsawPlugin implements Plugin<Project> {
             }
         });
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="JavaExec configuration methods">
     private void configureJavaExecTasks(final Project project) {
         project.getTasks().withType(JavaExec.class).forEach(this::configureJavaExecTask);
     }
@@ -499,6 +516,7 @@ public class JigsawPlugin implements Plugin<Project> {
             });
         }
     }
+    //</editor-fold>
 
     private String getModuleName(final String main) {
         final int slashIndex = main.indexOf('/');
@@ -523,6 +541,7 @@ public class JigsawPlugin implements Plugin<Project> {
     }
 
 
+    //<editor-fold desc="CreateStartScripts configuration methods">
     private void configureCreateStartScriptsTasks(final Project project) {
         project.getTasks().withType(CreateStartScripts.class).forEach(this::configureCreateStartScriptsTask);
     }
@@ -567,8 +586,10 @@ public class JigsawPlugin implements Plugin<Project> {
             throw new GradleException("Couldn't replace placeholder in " + path, ex);
         }
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="Task helper methods">
     private static void doAfterAllOtherDoFirstActions(final Task task, final Action<? super Task> action) {
         final List<Action<? super Task>> actionList = task.getActions();
 
@@ -607,8 +628,10 @@ public class JigsawPlugin implements Plugin<Project> {
             return DO_FIRST_ACTION_DISPLAY_NAME;
         }
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="SourceSet helper methods">
     private static SourceSetContainer getSourceSets(final Project project) {
         return project.getExtensions().getByType(SourceSetContainer.class);
     }
@@ -667,13 +690,17 @@ public class JigsawPlugin implements Plugin<Project> {
     private static JavaCompile getJavaCompile(final TaskContainer tasks, final SourceSet sourceSet) {
         return (JavaCompile) tasks.getByName(sourceSet.getCompileJavaTaskName());
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="moduleNames input property helper methods">
     private void setModuleNamesInputProperty(final Task task, final String moduleNamesCommaDelimited) {
         task.getInputs().property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited);
     }
+    //</editor-fold>
 
 
+    //<editor-fold desc="JDK tool module options helper methods">
     private static void addModuleArguments(final List<String> args, final ImmutableCollection<String> moduleNameIcoll, final Set<File> classpathFileSet) {
         // determine which classpath elements will be in --module-path, and which in --patch-module
         final int classpathFileCount = classpathFileSet.size();
@@ -734,4 +761,5 @@ public class JigsawPlugin implements Plugin<Project> {
             throw new GradleException("Could not determine if directory contains modules: " + dirPath, ex);
         }
     }
+    //</editor-fold>
 }
