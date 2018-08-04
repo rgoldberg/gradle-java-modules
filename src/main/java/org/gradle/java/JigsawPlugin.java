@@ -21,6 +21,8 @@ import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.ast.CompilationUnit;
 import com.google.common.collect.ImmutableSet;
+import org.gradle.api.Action;
+import org.gradle.api.Describable;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -40,6 +42,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -101,6 +104,8 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private static final String MODULE_NAME_JUNIT = "junit";
 
+    private static final String DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action";
+
 
     private String mainModuleName;
 
@@ -119,20 +124,33 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     private void configureJavaTasks(final Project project) {
-        project.afterEvaluate(p -> {
+        project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
+            if (taskExecutionGraph.getAllTasks().stream().noneMatch(task -> project.equals(task.getProject()) && isSupportedTask(task))) {
+                return;
+            }
+
             mainModuleName = getMainModuleName(project);
 
             if (mainModuleName != null) {
-                configureCompileJavaTask(    p);
-                configureCompileTestJavaTask(p);
-                configureTestTask(           p);
+                configureCompileJavaTask(    project);
+                configureCompileTestJavaTask(project);
+                configureTestTask(           project);
 
-                p.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, appliedPlugin -> {
-                    configureRunTask(         p);
-                    configureStartScriptsTask(p);
+                project.getPluginManager().withPlugin(APPLICATION_PLUGIN_NAME, appliedPlugin -> {
+                    configureRunTask(         project);
+                    configureStartScriptsTask(project);
                 });
             }
         });
+    }
+
+    private boolean isSupportedTask(final Task task) {
+        return
+            task instanceof JavaCompile        ||
+            task instanceof Test               ||
+            task instanceof JavaExec           ||
+            task instanceof CreateStartScripts
+        ;
     }
 
 
@@ -303,7 +321,7 @@ public class JigsawPlugin implements Plugin<Project> {
             getSourceSets(project).stream().flatMap(sourceSet -> stream(sourceSet.getOutput())).collect(toImmutableSet())
         ;
 
-        compileJava.doFirst(task -> {
+        doAfterAllOtherDoFirstActions(compileJava, task -> {
             final List<String> args = compileJava.getOptions().getCompilerArgs();
 
             addModulePathArgument(args, compileJava.getClasspath().filter(f -> ! outputDirFileIset.contains(f)));
@@ -321,7 +339,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
         setModuleNameInputProperty(compileTestJava);
 
-        compileTestJava.doFirst(task -> {
+        doAfterAllOtherDoFirstActions(compileTestJava, task -> {
             final List<String> args = compileTestJava.getOptions().getCompilerArgs();
 
             addModulePathArgument(args, compileTestJava.getClasspath());
@@ -345,7 +363,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
         setModuleNameInputProperty(test);
 
-        test.doFirst(task -> {
+        doAfterAllOtherDoFirstActions(test, task -> {
             final List<String> args = new ArrayList<>();
 
             addModulePathArgument(args, test.getClasspath());
@@ -370,7 +388,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
         setModuleNameInputProperty(run);
 
-        run.doFirst(task -> {
+        doAfterAllOtherDoFirstActions(run, task -> {
             final List<String> args = new ArrayList<>();
 
             addModulePathArgument(args, run.getClasspath());
@@ -390,7 +408,7 @@ public class JigsawPlugin implements Plugin<Project> {
 
         setModuleNameInputProperty(startScripts);
 
-        startScripts.doFirst(task -> {
+        doAfterAllOtherDoFirstActions(startScripts, task -> {
             final List<String> args = new ArrayList<>();
 
             addAll(args, startScripts.getDefaultJvmOpts());
@@ -420,6 +438,46 @@ public class JigsawPlugin implements Plugin<Project> {
         }
         catch (final IOException ex) {
             throw new GradleException("Couldn't replace placeholder in " + path, ex);
+        }
+    }
+
+
+    private static void doAfterAllOtherDoFirstActions(final Task task, final Action<? super Task> action) {
+        final List<Action<? super Task>> actionList = task.getActions();
+
+        for (final ListIterator<Action<? super Task>> actionLitr = actionList.listIterator(actionList.size()); actionLitr.hasPrevious();) {
+            final Action<? super Task> existingAction = actionLitr.previous();
+
+            if (
+                existingAction instanceof Describable &&
+                DO_FIRST_ACTION_DISPLAY_NAME.equals(((Describable) existingAction).getDisplayName())
+            ) {
+                actionList.add(actionLitr.nextIndex() + 1, new DoFirstAction<>(action));
+                return;
+            }
+        }
+
+        task.doFirst(action);
+    }
+
+    private static class DoFirstAction<T> implements Action<T>, Describable {
+
+        private final Action<? super T> delegate;
+
+
+        DoFirstAction(final Action<? super T> delegate) {
+            this.delegate = delegate;
+        }
+
+
+        @Override
+        public void execute(final T t) {
+            delegate.execute(t);
+        }
+
+        @Override
+        public String getDisplayName() {
+            return DO_FIRST_ACTION_DISPLAY_NAME;
         }
     }
 
