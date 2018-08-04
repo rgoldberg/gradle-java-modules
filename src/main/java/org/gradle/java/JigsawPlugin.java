@@ -147,6 +147,11 @@ public class JigsawPlugin implements Plugin<Project> {
     //</editor-fold>
 
 
+    //<editor-fold desc="Constructors">
+    public JigsawPlugin() {}
+    //</editor-fold>
+
+
     //<editor-fold desc="Accessors">
     private void setModuleNamesInputProperty(final Task task) {
         setModuleNamesInputProperty(task, join(",", moduleNameIsset));
