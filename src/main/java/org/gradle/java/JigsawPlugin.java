@@ -32,6 +32,7 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
@@ -388,10 +389,11 @@ public class JigsawPlugin implements Plugin<Project> {
         else {
             // source set contains at least one module-info.java
             doAfterAllOtherDoFirstActions(javaCompile, task -> {
+                final ImmutableCollection<String> moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values();
+
                 if (moduleNameIbyModuleInfoJavaPath.size() > 1) {
                     // generate --module-source-path
 
-                    //TODO: fix failing .class output check at ValidateTaskProperties$1.visitFile(ValidateTaskProperties.java:162)
                     //TODO: determine the packages for each module, and include root dir for all sources in that package
 
                     final List<String> args = javaCompile.getOptions().getCompilerArgs();
@@ -430,9 +432,22 @@ public class JigsawPlugin implements Plugin<Project> {
                             .collect(toImmutableSet())
                         )
                     );
+
+                    // must change the classes output directories for the SourceSet:
+                    // for each existing output directory, d, replace with subdirectories of d, one for each compile module name
+
+                    //TODO: only works if SourceSet#output#classesDirs is a ConfigurableFileCollection
+                    final ConfigurableFileCollection outputClassesDirs = (ConfigurableFileCollection) getSourceSet(javaCompile).getOutput().getClassesDirs();
+
+                    //TODO: ensure it is OK to change SourceSet#output#classesDirs during execution phase
+                    outputClassesDirs.setFrom(
+                        stream(outputClassesDirs)
+                        .flatMap(dirFile -> moduleNameIcoll.stream().map(moduleName -> new File(dirFile, moduleName)))
+                        .toArray()
+                    );
                 }
 
-                configureJavaCompileTask(javaCompile, moduleNameIbyModuleInfoJavaPath.values(), javaCompile.getClasspath());
+                configureJavaCompileTask(javaCompile, moduleNameIcoll, javaCompile.getClasspath());
             });
         }
     }
