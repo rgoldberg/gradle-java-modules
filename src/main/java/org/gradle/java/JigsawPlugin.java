@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.UnmodifiableIterator;
 import org.gradle.api.Action;
 import org.gradle.api.Describable;
 import org.gradle.api.GradleException;
@@ -74,7 +75,10 @@ import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_6;
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_7;
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_8;
 import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_9;
+import static com.google.common.base.Strings.commonPrefix;
+import static com.google.common.base.Strings.commonSuffix;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
 import static com.google.common.collect.Iterables.addAll;
 import static com.google.common.collect.Maps.immutableEntry;
@@ -89,6 +93,7 @@ import static org.gradle.java.jdk.Javac.OPTION_ADD_MODULES;
 import static org.gradle.java.jdk.Javac.OPTION_ADD_READS;
 import static org.gradle.java.jdk.Javac.OPTION_MODULE;
 import static org.gradle.java.jdk.Javac.OPTION_MODULE_PATH;
+import static org.gradle.java.jdk.Javac.OPTION_MODULE_SOURCE_PATH;
 import static org.gradle.java.jdk.Javac.OPTION_PATCH_MODULE;
 import static org.gradle.java.jdk.Javac.OPTION_RELEASE;
 import static org.gradle.java.jdk.Javac.OPTION_SOURCE;
@@ -382,9 +387,53 @@ public class JigsawPlugin implements Plugin<Project> {
         }
         else {
             // source set contains at least one module-info.java
-            doAfterAllOtherDoFirstActions(javaCompile, task ->
-                configureJavaCompileTask(javaCompile, moduleNameIbyModuleInfoJavaPath.values(), javaCompile.getClasspath())
-            );
+            doAfterAllOtherDoFirstActions(javaCompile, task -> {
+                if (moduleNameIbyModuleInfoJavaPath.size() > 1) {
+                    // generate --module-source-path
+
+                    //TODO: fix failing .class output check at ValidateTaskProperties$1.visitFile(ValidateTaskProperties.java:162)
+                    //TODO: determine the packages for each module, and include root dir for all sources in that package
+
+                    final List<String> args = javaCompile.getOptions().getCompilerArgs();
+
+                    args.add(OPTION_MODULE_SOURCE_PATH);
+                    args.add(
+                        getModuleSourcePath(
+                            moduleNameIbyModuleInfoJavaPath.entrySet().stream()
+                            .map(moduleNameIforModuleInfoJavaPath -> {
+                                final Path   moduleInfoJavaPath          = moduleNameIforModuleInfoJavaPath.getKey();
+                                final String moduleName                  = moduleNameIforModuleInfoJavaPath.getValue();
+                                final String separator                   = moduleInfoJavaPath.getFileSystem().getSeparator();
+                                final String moduleInfoJavaDirPathString = moduleInfoJavaPath.getParent().toString();
+
+                                final int i = moduleInfoJavaDirPathString.lastIndexOf(separator + moduleName + separator);
+
+                                return
+                                    i == -1
+                                        ? moduleInfoJavaDirPathString.endsWith(separator + moduleName)
+                                            ? moduleInfoJavaDirPathString.substring(
+                                                0,
+                                                moduleInfoJavaDirPathString.length() - separator.length() - moduleName.length()
+                                            )
+                                            : moduleInfoJavaDirPathString
+                                        : new StringBuilder(moduleInfoJavaDirPathString.length() - moduleName.length() + 1)
+                                        .append(moduleInfoJavaDirPathString, 0, i + separator.length())
+                                        .append('*')
+                                        .append(
+                                            moduleInfoJavaDirPathString,
+                                            i + separator.length() + moduleName.length(),
+                                            moduleInfoJavaDirPathString.length()
+                                        )
+                                        .toString()
+                                ;
+                            })
+                            .collect(toImmutableSet())
+                        )
+                    );
+                }
+
+                configureJavaCompileTask(javaCompile, moduleNameIbyModuleInfoJavaPath.values(), javaCompile.getClasspath());
+            });
         }
     }
 
@@ -430,6 +479,52 @@ public class JigsawPlugin implements Plugin<Project> {
         javaCompile.setClasspath(javaCompile.getProject().files());
 
         return args;
+    }
+
+    private String getModuleSourcePath(final ImmutableSet<String> moduleSourceIset) {
+        if (moduleSourceIset.size() == 1) {
+            return moduleSourceIset.iterator().next();
+        }
+
+        final UnmodifiableIterator<String> moduleSourceCommonUitr = moduleSourceIset.iterator();
+
+        String commonPrefix = moduleSourceCommonUitr.next();
+        String commonSuffix = commonPrefix;
+
+        while (moduleSourceCommonUitr.hasNext()) {
+            final String currModuleSource = moduleSourceCommonUitr.next();
+            commonPrefix = commonPrefix(commonPrefix, currModuleSource);
+            commonSuffix = commonSuffix(commonSuffix, currModuleSource);
+        }
+
+        if (commonPrefix.isEmpty() && commonSuffix.isEmpty()) {
+            return moduleSourceIset.stream().collect(joining(",", "{", "}"));
+        }
+
+        final int commonPrefixLength = commonPrefix.length();
+        final int commonSuffixLength = commonSuffix.length();
+
+        final StringBuilder sb = new StringBuilder();
+        sb.append(commonPrefix);
+        sb.append('{');
+
+        final UnmodifiableIterator<String> moduleSourceAlternateUitr = moduleSourceIset.iterator();
+
+        appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb);
+
+        while (moduleSourceAlternateUitr.hasNext()) {
+            sb.append(',');
+            appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb);
+        }
+
+        sb.append('}');
+        sb.append(commonSuffix);
+
+        return sb.toString();
+    }
+
+    private void appendModuleSourceAlternate(final String moduleSource, final int commonPrefixLength, final int commonSuffixLength, final StringBuilder sb) {
+        sb.append(moduleSource, commonPrefixLength, moduleSource.length() - commonSuffixLength);
     }
     //</editor-fold>
 
