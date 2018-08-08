@@ -38,7 +38,7 @@ repositories.jcenter()
 
 dependencies {
     implementation(    "com.github.javaparser", "javaparser-core", "3.15.11")
-    implementation(    "com.google.guava",      "guava",           "28.1-jre")
+    api(               "com.google.guava",      "guava",           "28.1-jre")
     testImplementation("org.spockframework",    "spock-core",      "1.3-groovy-2.5") {
         exclude("org.codehaus.groovy", "groovy-all")
     }
