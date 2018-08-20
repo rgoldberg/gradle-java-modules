@@ -37,6 +37,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Streams.stream;
 import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
 import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
+import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
 import static org.gradle.java.GradleUtils.getSourceSet;
 import static org.gradle.java.GradleUtils.getSourceSetName;
 import static org.gradle.java.jdk.JavaCommonTool.addModuleArguments;
@@ -69,7 +70,13 @@ public class JavaCompileTaskConfigurer implements TaskConfigurer<JavaCompile> {
                 // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
                 jigsawPlugin.setModuleNamesInputProperty(javaCompile);
 
+                final FileCollection[] classpathHolder = new FileCollection[1];
+
                 doAfterAllOtherDoFirstActions(javaCompile, task -> {
+                    final FileCollection classpath = javaCompile.getClasspath();
+
+                    classpathHolder[0] = classpath;
+
                     final Project project = javaCompile.getProject();
 
                     final ImmutableSortedSet<String> moduleNameIsset = jigsawPlugin.getModuleNameIsset();
@@ -78,7 +85,7 @@ public class JavaCompileTaskConfigurer implements TaskConfigurer<JavaCompile> {
                         configureTask(
                             javaCompile,
                             moduleNameIsset,
-                            javaCompile.getClasspath().plus(getSourceSet(project, TEST_SOURCE_SET_NAME).getAllJava().getSourceDirectories())
+                            classpath.plus(getSourceSet(project, TEST_SOURCE_SET_NAME).getAllJava().getSourceDirectories())
                         )
                     ;
 
@@ -96,11 +103,19 @@ public class JavaCompileTaskConfigurer implements TaskConfigurer<JavaCompile> {
                         }
                     });
                 });
+
+                doBeforeAllOtherDoLastActions(javaCompile, task -> javaCompile.setClasspath(classpathHolder[0]));
             }
         }
         else {
             // source set contains at least one module-info.java
+            final FileCollection[] classpathHolder = new FileCollection[1];
+
             doAfterAllOtherDoFirstActions(javaCompile, task -> {
+                final FileCollection classpath = javaCompile.getClasspath();
+
+                classpathHolder[0] = classpath;
+
                 final ImmutableCollection<String> moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values();
 
                 if (moduleNameIbyModuleInfoJavaPath.size() > 1) {
@@ -159,8 +174,10 @@ public class JavaCompileTaskConfigurer implements TaskConfigurer<JavaCompile> {
                     );
                 }
 
-                configureTask(javaCompile, moduleNameIcoll, javaCompile.getClasspath());
+                configureTask(javaCompile, moduleNameIcoll, classpath);
             });
+
+            doBeforeAllOtherDoLastActions(javaCompile, task -> javaCompile.setClasspath(classpathHolder[0]));
         }
     }
 

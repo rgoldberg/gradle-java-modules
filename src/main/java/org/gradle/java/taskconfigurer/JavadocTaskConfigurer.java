@@ -21,6 +21,7 @@ import org.gradle.external.javadoc.CoreJavadocOptions;
 import org.gradle.java.JigsawPlugin;
 
 import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
+import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
 import static org.gradle.java.jdk.Javadoc.OPTION_MODULE_PATH;
 
 public class JavadocTaskConfigurer implements TaskConfigurer<Javadoc> {
@@ -40,8 +41,12 @@ public class JavadocTaskConfigurer implements TaskConfigurer<Javadoc> {
     public void configureTask(final Javadoc javadoc, final JigsawPlugin jigsawPlugin) {
         jigsawPlugin.setModuleNamesInputProperty(javadoc);
 
+        final FileCollection[] classpathHolder = new FileCollection[1];
+
         doAfterAllOtherDoFirstActions(javadoc, task -> {
             final FileCollection classpath = javadoc.getClasspath();
+
+            classpathHolder[0] = classpath;
 
             if (! classpath.isEmpty()) {
                 ((CoreJavadocOptions) javadoc.getOptions()).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.getAsPath());
@@ -49,5 +54,7 @@ public class JavadocTaskConfigurer implements TaskConfigurer<Javadoc> {
                 javadoc.setClasspath(javadoc.getProject().files());
             }
         });
+
+        doBeforeAllOtherDoLastActions(javadoc, task -> javadoc.setClasspath(classpathHolder[0]));
     }
 }

@@ -18,6 +18,7 @@ package org.gradle.java.taskconfigurer;
 import com.google.common.collect.ImmutableSortedSet;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RelativePath;
 import org.gradle.api.internal.file.RelativeFile;
 import org.gradle.api.internal.tasks.testing.detection.TestFrameworkDetector;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
+import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
 import static org.gradle.java.jdk.Java.ALL_MODULE_PATH;
 import static org.gradle.java.jdk.Java.OPTION_ADD_MODULES;
 import static org.gradle.java.jdk.Java.OPTION_ADD_READS;
@@ -56,8 +58,14 @@ public class TestTaskConfigurer implements TaskConfigurer<Test> {
     public void configureTask(final Test test, final JigsawPlugin jigsawPlugin) {
         jigsawPlugin.setModuleNamesInputProperty(test);
 
+        final FileCollection[] classpathHolder = new FileCollection[1];
+
         doAfterAllOtherDoFirstActions(test, task -> {
-            final Set<File> classpathFileSet = test.getClasspath().getFiles();
+            final FileCollection classpath = test.getClasspath();
+
+            classpathHolder[0] = classpath;
+
+            final Set<File> classpathFileSet = classpath.getFiles();
 
             //HACK:
             // Test#classpath is used by the @TaskAction of Test to set the classpath, which is used to:
@@ -138,5 +146,7 @@ public class TestTaskConfigurer implements TaskConfigurer<Test> {
 
             test.setClasspath(project.files());
         });
+
+        doBeforeAllOtherDoLastActions(test, task -> test.setClasspath(classpathHolder[0]));
     }
 }

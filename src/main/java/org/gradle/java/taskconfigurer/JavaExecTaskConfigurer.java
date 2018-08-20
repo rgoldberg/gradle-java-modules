@@ -16,6 +16,7 @@
 package org.gradle.java.taskconfigurer;
 
 import com.google.common.collect.ImmutableSet;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.java.JigsawPlugin;
 
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
+import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
 import static org.gradle.java.GradleUtils.setModuleNamesInputProperty;
 import static org.gradle.java.jdk.Java.OPTION_MODULE;
 import static org.gradle.java.jdk.JavaCommonTool.addModuleArguments;
@@ -45,10 +47,16 @@ public class JavaExecTaskConfigurer implements TaskConfigurer<JavaExec> {
         if (moduleName != null) {
             setModuleNamesInputProperty(javaExec, moduleName);
 
+            final FileCollection[] classpathHolder = new FileCollection[1];
+
             doAfterAllOtherDoFirstActions(javaExec, task -> {
+                final FileCollection classpath = javaExec.getClasspath();
+
+                classpathHolder[0] = classpath;
+
                 final List<String> args = new ArrayList<>();
 
-                addModuleArguments(args, ImmutableSet.of(moduleName), javaExec.getClasspath().getFiles());
+                addModuleArguments(args, ImmutableSet.of(moduleName), classpath.getFiles());
 
                 args.add(OPTION_MODULE);
                 args.add(main);
@@ -56,6 +64,11 @@ public class JavaExecTaskConfigurer implements TaskConfigurer<JavaExec> {
                 javaExec.jvmArgs(args);
                 javaExec.setMain("");
                 javaExec.setClasspath(javaExec.getProject().files());
+            });
+
+            doBeforeAllOtherDoLastActions(javaExec, task -> {
+                javaExec.setMain(main);
+                javaExec.setClasspath(classpathHolder[0]);
             });
         }
     }

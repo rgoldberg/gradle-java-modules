@@ -16,6 +16,7 @@
 package org.gradle.java.taskconfigurer;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.application.CreateStartScripts;
 import org.gradle.java.JigsawPlugin;
 
@@ -29,6 +30,7 @@ import java.util.stream.Stream;
 import static com.google.common.collect.Iterables.addAll;
 import static com.google.common.io.MoreFiles.asCharSink;
 import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
+import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
 import static org.gradle.java.GradleUtils.setModuleNamesInputProperty;
 import static org.gradle.java.jdk.Java.OPTION_MODULE;
 import static org.gradle.java.jdk.Java.OPTION_MODULE_PATH;
@@ -61,7 +63,11 @@ public class CreateStartScriptsTaskConfigurer implements TaskConfigurer<CreateSt
         if (moduleName != null) {
             setModuleNamesInputProperty(createStartScripts, moduleName);
 
+            final FileCollection[] classpathHolder = new FileCollection[1];
+
             doAfterAllOtherDoFirstActions(createStartScripts, task -> {
+                classpathHolder[0] = createStartScripts.getClasspath();
+
                 final List<String> args = new ArrayList<>();
 
                 addAll(args, createStartScripts.getDefaultJvmOpts());
@@ -77,9 +83,12 @@ public class CreateStartScriptsTaskConfigurer implements TaskConfigurer<CreateSt
                 createStartScripts.setClasspath(createStartScripts.getProject().files());
             });
 
-            createStartScripts.doLast(task -> {
+            doBeforeAllOtherDoLastActions(createStartScripts, task -> {
                 replaceLibDirectoryPlaceholder(createStartScripts.getUnixScript()   .toPath(), "\\$APP_HOME/lib",   getUnixLineSeparator());
                 replaceLibDirectoryPlaceholder(createStartScripts.getWindowsScript().toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator());
+
+                createStartScripts.setMainClassName(main);
+                createStartScripts.setClasspath(classpathHolder[0]);
             });
         }
     }

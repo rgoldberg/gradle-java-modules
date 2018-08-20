@@ -87,6 +87,24 @@ public class GradleUtils {
             return DO_FIRST_ACTION_DISPLAY_NAME;
         }
     }
+
+    public static void doBeforeAllOtherDoLastActions(final Task task, final Action<? super Task> action) {
+        final List<Action<? super Task>> actionList = task.getActions();
+
+        for (final ListIterator<Action<? super Task>> actionLitr = actionList.listIterator(); actionLitr.hasNext();) {
+            final Action<? super Task> existingAction = actionLitr.next();
+
+            if (
+                existingAction instanceof Describable &&
+                "Execute doLast {} action".equals(((Describable) existingAction).getDisplayName())
+            ) {
+                actionList.add(actionLitr.previousIndex(), action);
+                return;
+            }
+        }
+
+        task.doLast(action);
+    }
     //</editor-fold>
 
 
