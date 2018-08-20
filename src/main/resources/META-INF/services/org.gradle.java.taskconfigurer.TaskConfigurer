@@ -1,5 +1,0 @@
-org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer
-org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer
-org.gradle.java.taskconfigurer.JavaExecTaskConfigurer
-org.gradle.java.taskconfigurer.JavadocTaskConfigurer
-org.gradle.java.taskconfigurer.TestTaskConfigurer

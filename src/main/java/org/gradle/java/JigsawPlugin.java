@@ -21,7 +21,6 @@ import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.ast.CompilationUnit;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
@@ -31,14 +30,20 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer;
+import org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer;
+import org.gradle.java.taskconfigurer.JavaExecTaskConfigurer;
+import org.gradle.java.taskconfigurer.JavadocTaskConfigurer;
 import org.gradle.java.taskconfigurer.TaskConfigurer;
+import org.gradle.java.taskconfigurer.TestTaskConfigurer;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.ServiceConfigurationError;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -72,7 +77,6 @@ import static org.gradle.java.jdk.Javac.OPTION_SOURCE;
 import static java.lang.String.join;
 import static java.lang.System.lineSeparator;
 import static java.util.Comparator.naturalOrder;
-import static java.util.ServiceLoader.load;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Stream.concat;
 
@@ -88,30 +92,12 @@ public class JigsawPlugin implements Plugin<Project> {
 
     private ImmutableSortedSet<String> moduleNameIsset;
 
-    private final ImmutableSet<TaskConfigurer<? extends Task>> taskConfigurerIset;
+    private final Set<TaskConfigurer<? extends Task>> taskConfigurerSet = new LinkedHashSet<>();
     //</editor-fold>
 
 
     //<editor-fold desc="Constructors">
-    public JigsawPlugin() {
-        final ImmutableSet.Builder<TaskConfigurer<? extends Task>> taskConfigurerIsetBuilder = ImmutableSet.builder();
-
-        final Iterator<TaskConfigurer> taskConfigurerItr = load(TaskConfigurer.class).iterator();
-        while (taskConfigurerItr.hasNext()) {
-            try {
-                taskConfigurerIsetBuilder.add(taskConfigurerItr.next());
-            }
-            catch (final ServiceConfigurationError er) {
-                LOGGER.debug(
-                    "Skipping TaskConfigurer provider that failed to load, presumably because its required classes aren't available to Gradle, "
-                    + "presumably because the Task it configures is provided by a plugin hasn't been applied in this build",
-                    er
-                );
-            }
-        }
-
-        taskConfigurerIset = taskConfigurerIsetBuilder.build();
-    }
+    public JigsawPlugin() {}
     //</editor-fold>
 
 
@@ -149,6 +135,10 @@ public class JigsawPlugin implements Plugin<Project> {
     public void setModuleNamesInputProperty(final Task task) {
         GradleUtils.setModuleNamesInputProperty(task, join(",", moduleNameIsset));
     }
+
+    public void register(final TaskConfigurer<? extends Task> taskConfigurer) {
+        taskConfigurerSet.add(taskConfigurer);
+    }
     //</editor-fold>
 
 
@@ -159,13 +149,19 @@ public class JigsawPlugin implements Plugin<Project> {
 
         project.getPlugins().apply(JavaPlugin.class);
 
+        register(new CreateStartScriptsTaskConfigurer());
+        register(new JavaCompileTaskConfigurer());
+        register(new JavaExecTaskConfigurer());
+        register(new JavadocTaskConfigurer());
+        register(new TestTaskConfigurer());
+
         project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
             final List<Task> taskList = taskExecutionGraph.getAllTasks();
 
             if (
                 taskList.stream().noneMatch(task ->
                     project.equals(task.getProject()) &&
-                    taskConfigurerIset.stream().anyMatch(taskConfigurer -> taskConfigurer.getTaskClass().isInstance(task))
+                    taskConfigurerSet.stream().anyMatch(taskConfigurer -> taskConfigurer.getTaskClass().isInstance(task))
                 )
             ) {
                 return;
@@ -180,7 +176,7 @@ public class JigsawPlugin implements Plugin<Project> {
                     .collect(toImmutableSortedSet(naturalOrder()))
                 ;
 
-                for (final TaskConfigurer<? extends Task> taskConfigurer : taskConfigurerIset) {
+                for (final TaskConfigurer<? extends Task> taskConfigurer : taskConfigurerSet) {
                     configure(taskList, taskConfigurer);
                 }
             }
