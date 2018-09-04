@@ -329,15 +329,13 @@ public class JigsawPlugin implements Plugin<Project> {
             configureCompileTestJavaTask(javaCompile);
         }
         else {
-            doAfterAllOtherDoFirstActions(javaCompile, task -> {
-                final List<String> args = javaCompile.getOptions().getCompilerArgs();
-
-                addModulePathArgument(args, javaCompile.getClasspath().filter(f -> ! outputDirFileIset.contains(f)));
-
-                addPatchModuleArgument(args, mainModuleName, javaCompile.getClasspath().filter(outputDirFileIset::contains));
-
-                javaCompile.setClasspath(javaCompile.getProject().files());
-            });
+            doAfterAllOtherDoFirstActions(javaCompile, task ->
+                configureJavaCompileTask(
+                    javaCompile,
+                    javaCompile.getClasspath().filter(f -> ! outputDirFileIset.contains(f)),
+                    javaCompile.getClasspath().filter(outputDirFileIset::contains)
+                )
+            );
         }
     }
 
@@ -347,9 +345,13 @@ public class JigsawPlugin implements Plugin<Project> {
         doAfterAllOtherDoFirstActions(compileTestJava, task -> {
             final Project project = compileTestJava.getProject();
 
-            final List<String> args = compileTestJava.getOptions().getCompilerArgs();
-
-            addModulePathArgument(args, compileTestJava.getClasspath());
+            final List<String> args =
+                configureJavaCompileTask(
+                    compileTestJava,
+                    compileTestJava.getClasspath(),
+                    getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories()
+                )
+            ;
 
             project.getTasks().withType(Test.class).configureEach(test -> {
                 final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
@@ -362,11 +364,23 @@ public class JigsawPlugin implements Plugin<Project> {
                     args.add(mainModuleName + '=' + testModuleNameCommaDelimitedString);
                 }
             });
-
-            addPatchModuleArgument(args, mainModuleName, getSourceSets(project).getByName(TEST_SOURCE_SET_NAME).getJava().getSourceDirectories());
-
-            compileTestJava.setClasspath(project.files());
         });
+    }
+
+    private List<String> configureJavaCompileTask(
+        final JavaCompile    javaCompile,
+        final FileCollection modulePathFileCollection,
+        final FileCollection patchModuleFileCollection
+    ) {
+        final List<String> args = javaCompile.getOptions().getCompilerArgs();
+
+        addModulePathArgument(args, modulePathFileCollection);
+
+        addPatchModuleArgument(args, mainModuleName, patchModuleFileCollection);
+
+        javaCompile.setClasspath(javaCompile.getProject().files());
+
+        return args;
     }
 
 
