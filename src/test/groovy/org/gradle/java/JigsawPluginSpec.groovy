@@ -15,124 +15,132 @@
  */
 package org.gradle.java
 
+import org.gradle.api.JavaVersion
+import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
-import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 
+import static org.gradle.api.JavaVersion.VERSION_1_9
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 class JigsawPluginSpec extends Specification {
+
+    private static final SUPPORTS_MODULES = JavaVersion.current() >= VERSION_1_9
+
+
     @Rule
     final TemporaryFolder tmpDir = new TemporaryFolder()
-    static final NOT_JAVA_9 = !System.getProperty("java.version").startsWith("9")
+
 
     def setup() {
-        def buildFile = tmpDir.newFile("build.gradle")
-        buildFile << """
+        tmpDir.newFile('build.gradle.kts') << '''\
 plugins {
-  id 'application'
-  id 'org.gradle.java.experimental-jigsaw' version '0.1.0'
+  application
+  id("org.gradle.java.experimental-jigsaw") version "0.1.1"
 }
 
-repositories {
-  jcenter()
-}
+repositories.jcenter()
 
 dependencies {
-  testImplementation 'junit:junit:4.12'
+  testImplementation("junit", "junit", "4.12")
 }
 
-javaModule.name = 'test.module'
-mainClassName = 'io.example.AClass'
-"""
-        def settingsFile = tmpDir.newFile("settings.gradle")
-        settingsFile << """
+javaModule.name = "test.module"
+
+application.mainClassName = "com.example.AClass"
+'''
+
+        tmpDir.newFile('settings.gradle.kts') << '''\
 rootProject.name = "modular"
-"""
-        tmpDir.newFolder("src", "main", "java", "io", "example")
-        tmpDir.newFolder("src", "test", "java", "io", "example")
+'''
 
-        def moduleDescriptor = tmpDir.newFile("src/main/java/module-info.java")
-        moduleDescriptor << """
+        tmpDir.newFolder('src', 'main', 'java', 'com', 'example')
+        tmpDir.newFolder('src', 'test', 'java', 'com', 'example')
+
+        tmpDir.newFile('src/main/java/module-info.java') << '''\
 module test.module {
-  exports io.example;
+  exports com.example;
 }
-"""
-        def sourceFile = tmpDir.newFile("src/main/java/io/example/AClass.java")
-        sourceFile << """
-package io.example;
+'''
+
+        tmpDir.newFile('src/main/java/com/example/AClass.java') << '''\
+package com.example;
+
 public class AClass {
+
   public void aMethod(String aString) {
     System.out.println(aString);
   }
-  
+
   public static void main(String... args) {
     new AClass().aMethod("Hello World!");
   }
 }
-"""
-        def testFile = tmpDir.newFile("src/test/java/io/example/AClassTest.java")
-        testFile << """
-package io.example;
+'''
+
+        tmpDir.newFile('src/test/java/com/example/AClassTest.java') << '''\
+package com.example;
 
 import org.junit.Test;
+
 import static org.junit.Assert.assertTrue;
 
 public class AClassTest {
+
   @Test
   public void isAnInstanceOfAClass() {
-      assertTrue(new AImplementation() instanceof AClass);
+    assertTrue(new AImplementation() instanceof AClass);
   }
-  
+
   static class AImplementation extends AClass {
     @Override
     public void aMethod(String aString) {
-        // Do nothing
+      // Do nothing
     }
   }
 }
-"""
+'''
     }
 
-    @IgnoreIf({NOT_JAVA_9})
-    def "can assemble a module"() {
-        when:
-        def result = GradleRunner.create()
-                .withProjectDir(tmpDir.root)
-                .withArguments("assemble")
-                .withPluginClasspath().build()
-
-        then:
-        result.task(":compileJava").outcome == SUCCESS
-        result.task(":jar").outcome == SUCCESS
-        new File(tmpDir.root, "build/libs/modular.jar").exists()
-        new File(tmpDir.root, "build/classes/java/main/module-info.class").exists()
-        new File(tmpDir.root, "build/classes/java/main/io/example/AClass.class").exists()
+    private BuildResult build(final String taskName) {
+        GradleRunner.create()
+        .withProjectDir(tmpDir.root)
+        .withArguments('--debug', '--stacktrace', '--warning-mode', 'all', taskName)
+        .withPluginClasspath()
+        .build()
     }
 
-    @IgnoreIf({NOT_JAVA_9})
-    def "can check a module"() {
+    @Requires({SUPPORTS_MODULES})
+    def 'can assemble a module'() {
         when:
-        def result = GradleRunner.create()
-                .withProjectDir(tmpDir.root)
-                .withArguments("check")
-                .withPluginClasspath().build()
+        final BuildResult result = build('assemble')
 
         then:
-        result.task(":test").outcome == SUCCESS
+        result.task(':compileJava').outcome == SUCCESS
+        result.task(':jar').outcome == SUCCESS
+        new File(tmpDir.root, 'build/libs/modular.jar').exists()
+        new File(tmpDir.root, 'build/classes/java/main/module-info.class').exists()
+        new File(tmpDir.root, 'build/classes/java/main/com/example/AClass.class').exists()
     }
 
-    @IgnoreIf({NOT_JAVA_9})
-    def "can run with a module"() {
+    @Requires({SUPPORTS_MODULES})
+    def 'can check a module'() {
         when:
-        def result = GradleRunner.create()
-                .withProjectDir(tmpDir.root)
-                .withArguments("run")
-                .withPluginClasspath().build()
+        final BuildResult result = build('check')
 
         then:
-        result.output.contains("Hello World!")
+        result.task(':test').outcome == SUCCESS
+    }
+
+    @Requires({SUPPORTS_MODULES})
+    def 'can run with a module'() {
+        when:
+        final BuildResult result = build('run')
+
+        then:
+        result.output.contains('Hello World!')
     }
 }
