@@ -109,6 +109,7 @@ dependencies {
     testImplementation("org.spockframework",    "spock-core",      "1.3-groovy-2.5") {
         exclude("org.codehaus.groovy", "groovy-all")
     }
+    compileOnly(       kotlin("gradle-plugin", "1.3.61"))
 }
 
 dependencyLocking {

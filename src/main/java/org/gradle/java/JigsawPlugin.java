@@ -34,6 +34,7 @@ import org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer;
 import org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer;
 import org.gradle.java.taskconfigurer.JavaExecTaskConfigurer;
 import org.gradle.java.taskconfigurer.JavadocTaskConfigurer;
+import org.gradle.java.taskconfigurer.KotlinCompileTaskConfigurer;
 import org.gradle.java.taskconfigurer.TaskConfigurer;
 import org.gradle.java.taskconfigurer.TestTaskConfigurer;
 
@@ -154,6 +155,8 @@ public class JigsawPlugin implements Plugin<Project> {
         register(new JavaExecTaskConfigurer());
         register(new JavadocTaskConfigurer());
         register(new TestTaskConfigurer());
+
+        project.getPlugins().withId("org.jetbrains.kotlin.jvm", plugin -> register(new KotlinCompileTaskConfigurer()));
 
         project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
             final List<Task> taskList = taskExecutionGraph.getAllTasks();
