@@ -1,3 +1,8 @@
 com.gradle.plugin-publish:com.gradle.plugin-publish.gradle.plugin:0.10.1
 com.gradle.publish:plugin-publish-plugin:0.10.1
+#commons-io:commons-io:2.5
+#gradle.plugin.org.ysb33r.gradle:gradletest:2.0
 org.apache.maven:maven-model:3.0.4
+#org.tukaani:xz:1.6
+#org.ysb33r.gradle:grolifant:0.13
+#org.ysb33r.gradletest:org.ysb33r.gradletest.gradle.plugin:2.0
