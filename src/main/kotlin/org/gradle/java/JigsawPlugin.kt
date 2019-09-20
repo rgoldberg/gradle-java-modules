@@ -13,185 +13,145 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java;
+package org.gradle.java
 
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParseResult;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ParserConfiguration.LanguageLevel;
-import com.github.javaparser.ast.CompilationUnit;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
-import org.gradle.api.GradleException;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.compile.JavaCompile;
-import org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer;
-import org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer;
-import org.gradle.java.taskconfigurer.JavaExecTaskConfigurer;
-import org.gradle.java.taskconfigurer.JavadocTaskConfigurer;
-import org.gradle.java.taskconfigurer.KotlinCompileTaskConfigurer;
-import org.gradle.java.taskconfigurer.TaskConfigurer;
-import org.gradle.java.taskconfigurer.TestTaskConfigurer;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.stream.Stream;
+import com.github.javaparser.JavaParser
+import com.github.javaparser.ParserConfiguration
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_0
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_1
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_2
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_3
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_4
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_5
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_6
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_7
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_8
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_9
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_10
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_11
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_12
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_13
+import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_14
+import com.google.common.collect.ImmutableSortedMap
+import com.google.common.collect.ImmutableSortedMap.toImmutableSortedMap
+import com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet
+import com.google.common.collect.Streams.stream
+import java.io.IOException
+import java.lang.System.lineSeparator
+import java.nio.file.Path
+import java.util.stream.Collectors.joining
+import java.util.stream.Stream
+import java.util.stream.Stream.concat
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.logging.Logging.getLogger
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.java.GradleUtils.getJavaCompile
+import org.gradle.java.GradleUtils.getSourceSets
+import org.gradle.java.GradleUtils.setModuleNamesInputProperty
+import org.gradle.java.jdk.JavaSourceTool.Companion.FILE_NAME_MODULE_INFO_JAVA
+import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_RELEASE
+import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_SOURCE
+import org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer
+import org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer
+import org.gradle.java.taskconfigurer.JavaExecTaskConfigurer
+import org.gradle.java.taskconfigurer.JavadocTaskConfigurer
+import org.gradle.java.taskconfigurer.KotlinCompileTaskConfigurer
+import org.gradle.java.taskconfigurer.TaskConfigurer
+import org.gradle.java.taskconfigurer.TestTaskConfigurer
 
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_10;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_11;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_12;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_13;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_14;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_0;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_1;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_2;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_3;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_1_4;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_5;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_6;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_7;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_8;
-import static com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_9;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
-import static com.google.common.collect.Maps.immutableEntry;
-import static com.google.common.collect.Streams.stream;
-import static org.gradle.api.logging.Logging.getLogger;
-import static org.gradle.java.GradleUtils.getJavaCompile;
-import static org.gradle.java.GradleUtils.getSourceSets;
-import static org.gradle.java.jdk.Javac.FILE_NAME_MODULE_INFO_JAVA;
-import static org.gradle.java.jdk.Javac.OPTION_RELEASE;
-import static org.gradle.java.jdk.Javac.OPTION_SOURCE;
 
-import static java.lang.String.join;
-import static java.lang.System.lineSeparator;
-import static java.util.Comparator.naturalOrder;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Stream.concat;
-
-public class JigsawPlugin implements Plugin<Project> {
-
-    //<editor-fold desc="Constants">
-    private static final Logger LOGGER = getLogger(JigsawPlugin.class);
-    //</editor-fold>
-
+class JigsawPlugin: Plugin<Project> {
 
     //<editor-fold desc="Fields">
-    private ImmutableMap<String, ImmutableMap<Path, String>> moduleNameIbyModuleInfoJavaPath_IbySourceSetName;
+    private lateinit var project: Project
 
-    private ImmutableSortedSet<String> moduleNameIsset;
+    val moduleNameIsset by lazy {
+        moduleNameIbyModuleInfoJavaPath_IbySourceSetName.values.stream()
+        .flatMap {it.values.stream()}
+        .collect(toImmutableSortedSet(naturalOrder()))
+    }
 
-    private final Set<TaskConfigurer<? extends Task>> taskConfigurerSet = new LinkedHashSet<>();
-    //</editor-fold>
-
-
-    //<editor-fold desc="Constructors">
-    public JigsawPlugin() {}
+    private val taskConfigurerSet = mutableSetOf<TaskConfigurer<out Task>>()
     //</editor-fold>
 
 
     //<editor-fold desc="Accessors">
-    public ImmutableMap<Path, String> getModuleNameIbyModuleInfoJavaPath(final String sourceSetName) {
-        return moduleNameIbyModuleInfoJavaPath_IbySourceSetName.getOrDefault(sourceSetName, ImmutableMap.of());
+    fun getModuleNameIbyModuleInfoJavaPath(sourceSetName: String) =
+        moduleNameIbyModuleInfoJavaPath_IbySourceSetName.getOrDefault(sourceSetName, ImmutableSortedMap.of())
+
+    fun getModuleName(main: String): String? {
+        val slashIndex = main.indexOf('/')
+        return when {
+            // build script specified module/class
+            slashIndex >= 0                -> main.substring(0, slashIndex)
+            // build script specified module that is built in this build
+            moduleNameIsset.contains(main) -> main
+            // couldn't find module/class or module, so use non-modular command line
+            else                           -> null
+
+            //TODO: check jars in classpath for modules, possibly from:
+            //    module-info.class
+            //    Automatic-Module-Name in META-INF/MANIFEST.MF
+            //    jar file name
+            //TODO: check directories in classpath for modules, possibly from:
+            //    Automatic-Module-Name in META-INF/MANIFEST.MF
+            //    directory name
+        }
     }
 
-    public ImmutableSortedSet<String> getModuleNameIsset() {
-        return moduleNameIsset;
-    }
+    fun setModuleNamesInputProperty(task: Task) =
+        setModuleNamesInputProperty(task, moduleNameIsset.joinToString(","))
 
-    public String getModuleName(final String main) {
-        final int slashIndex = main.indexOf('/');
-        return
-            slashIndex >= 0
-                // build script specified module/class
-                ? main.substring(0, slashIndex)
-                : moduleNameIsset.contains(main)
-                    // build script specified module that is built in this build
-                    ? main
-                    // couldn't find module/class or module, so use non-modular command line
-                    : null
-        ;
-
-        //TODO: check jars in classpath for modules, possibly from:
-        //    module-info.class
-        //    Automatic-Module-Name in META-INF/MANIFEST.MF
-        //    jar file name
-        //TODO: check directories in classpath for modules, possibly from:
-        //    Automatic-Module-Name in META-INF/MANIFEST.MF
-        //    directory name
-    }
-
-    public void setModuleNamesInputProperty(final Task task) {
-        GradleUtils.setModuleNamesInputProperty(task, join(",", moduleNameIsset));
-    }
-
-    public void register(final TaskConfigurer<? extends Task> taskConfigurer) {
-        taskConfigurerSet.add(taskConfigurer);
+    fun register(taskConfigurer: TaskConfigurer<out Task>) {
+        taskConfigurerSet += taskConfigurer
     }
     //</editor-fold>
 
 
     //<editor-fold desc="Plugin methods">
-    @Override
-    public void apply(final Project project) {
-        LOGGER.debug("Applying JigsawPlugin to {}", project.getName());
+    override fun apply(project: Project) {
+        LOGGER.debug("Applying JigsawPlugin to {}", project.name)
 
-        project.getPlugins().apply(JavaPlugin.class);
+        this.project = project
 
-        register(new CreateStartScriptsTaskConfigurer());
-        register(new JavaCompileTaskConfigurer());
-        register(new JavaExecTaskConfigurer());
-        register(new JavadocTaskConfigurer());
-        register(new TestTaskConfigurer());
+        project.plugins.apply(JavaPlugin::class.java)
 
-        project.getPlugins().withId("org.jetbrains.kotlin.jvm", plugin -> register(new KotlinCompileTaskConfigurer()));
+        register(CreateStartScriptsTaskConfigurer())
+        register(JavaCompileTaskConfigurer())
+        register(JavaExecTaskConfigurer())
+        register(JavadocTaskConfigurer())
+        register(TestTaskConfigurer())
 
-        project.getGradle().getTaskGraph().whenReady(taskExecutionGraph -> {
-            final List<Task> taskList = taskExecutionGraph.getAllTasks();
+        project.plugins.withId("org.jetbrains.kotlin.jvm") {register(KotlinCompileTaskConfigurer())}
+
+        project.gradle.taskGraph.whenReady {taskExecutionGraph ->
+            val taskList = taskExecutionGraph.allTasks
 
             if (
-                taskList.stream().noneMatch(task ->
-                    project.equals(task.getProject()) &&
-                    taskConfigurerSet.stream().anyMatch(taskConfigurer -> taskConfigurer.getTaskClass().isInstance(task))
-                )
+                taskList.stream().anyMatch {task ->
+                    project == task.project &&
+                    taskConfigurerSet.stream().anyMatch {taskConfigurer -> taskConfigurer.taskClass.isInstance(task)}
+                } &&
+                moduleNameIbyModuleInfoJavaPath_IbySourceSetName.isNotEmpty()
             ) {
-                return;
-            }
-
-            parseModuleInfoJavas(project);
-
-            if (! moduleNameIbyModuleInfoJavaPath_IbySourceSetName.isEmpty()) {
-                moduleNameIsset =
-                    moduleNameIbyModuleInfoJavaPath_IbySourceSetName.values().stream()
-                    .flatMap(entry -> entry.values().stream())
-                    .collect(toImmutableSortedSet(naturalOrder()))
-                ;
-
-                for (final TaskConfigurer<? extends Task> taskConfigurer : taskConfigurerSet) {
-                    configure(taskList, taskConfigurer);
+                for (taskConfigurer in taskConfigurerSet) {
+                    configure(taskList, taskConfigurer)
                 }
             }
-        });
+        }
     }
 
-    private <T extends Task> void configure(final List<? extends Task> taskList, final TaskConfigurer<T> taskConfigurer) {
-        final Class<T> supportedClass = taskConfigurer.getTaskClass();
+    private fun <T: Task> configure(taskList: List<Task>, taskConfigurer: TaskConfigurer<T>) {
+        val supportedClass = taskConfigurer.taskClass
 
-        for (final Task task : taskList) {
+        for (task in taskList) {
             if (supportedClass.isInstance(task)) {
-                taskConfigurer.configureTask(supportedClass.cast(task), this);
+                taskConfigurer.configureTask(supportedClass.cast(task), this)
             }
         }
     }
@@ -199,26 +159,22 @@ public class JigsawPlugin implements Plugin<Project> {
 
 
     //<editor-fold desc="module-info.java parsing methods">
-    private void parseModuleInfoJavas(final Project project) {
-        final SortedMap<String, SortedMap<Path, String>> moduleNameSbyModuleInfoJavaPath_SbySourceSetName = new TreeMap<>();
+    private val moduleNameIbyModuleInfoJavaPath_IbySourceSetName: ImmutableSortedMap<String, ImmutableSortedMap<Path, String>> by lazy {
+        val moduleNameByModuleInfoJavaPath_BySourceSetName = mutableMapOf<String, ImmutableSortedMap.Builder<Path, String>>()
+
+        val tasks = project.tasks
 
         getSourceSets(project).stream()
-        .flatMap(sourceSet ->
-            stream(sourceSet.getAllJava().matching(pattern -> pattern.include("**/" + FILE_NAME_MODULE_INFO_JAVA)))
-            .map(moduleInfoJavaFile -> immutableEntry(sourceSet, moduleInfoJavaFile.toPath()))
-        )
-        .forEach(moduleInfoJavaPathIforSourceSet -> {
-            final Path moduleInfoJavaPath = moduleInfoJavaPathIforSourceSet.getValue();
+        .flatMap {sourceSet ->
+            stream(sourceSet.allJava.matching {pattern -> pattern.include("**/" + FILE_NAME_MODULE_INFO_JAVA)})
+            .map {sourceSet to it.toPath()}
+        }
+        .forEach {(sourceSet, moduleInfoJavaPath) ->
             try {
-                final SourceSet sourceSet = moduleInfoJavaPathIforSourceSet.getKey();
+                val parseResult = JavaParser(ParserConfiguration().setLanguageLevel(getLanguageLevel(getJavaCompile(tasks, sourceSet)))).parse(moduleInfoJavaPath)
 
-                final ParseResult<CompilationUnit> parseResult =
-                    new JavaParser(new ParserConfiguration().setLanguageLevel(getLanguageLevel(getJavaCompile(project.getTasks(), sourceSet))))
-                    .parse(moduleInfoJavaPath)
-                ;
-
-                if (! parseResult.isSuccessful()) {
-                    throw new GradleException(
+                if (! parseResult.isSuccessful) {
+                    throw GradleException(
                         concat(
                             Stream.of(
                                 "Couldn't parse Java module name from:",
@@ -228,143 +184,117 @@ public class JigsawPlugin implements Plugin<Project> {
                                 "Because of the following parse problems:",
                                 ""
                             ),
-                            parseResult.getProblems().stream().map(Object::toString)
+                            parseResult.problems.stream().map(Any::toString)
                         )
                         .collect(joining(lineSeparator()))
-                    );
+                    )
                 }
 
-                moduleNameSbyModuleInfoJavaPath_SbySourceSetName.computeIfAbsent(sourceSet.getName(), k -> new TreeMap<>()).put(
+                moduleNameByModuleInfoJavaPath_BySourceSetName.computeIfAbsent(sourceSet.name) {ImmutableSortedMap.naturalOrder()}.put(
                     moduleInfoJavaPath,
-                    parseResult.getResult().get().getModule().orElseThrow(GradleException::new).getName().asString()
-                );
+                    parseResult.result.get().module.orElseThrow(::GradleException).name.asString()
+                )
             }
-            catch (final IOException ex) {
-                throw new GradleException("Couldn't parse Java module name from " + moduleInfoJavaPath, ex);
+            catch (ex: IOException) {
+                throw GradleException("Couldn't parse Java module name from " + moduleInfoJavaPath, ex)
             }
-        });
-
-        moduleNameIbyModuleInfoJavaPath_IbySourceSetName =
-            moduleNameSbyModuleInfoJavaPath_SbySourceSetName.entrySet().stream()
-            .collect(toImmutableMap(Entry::getKey, e -> ImmutableMap.copyOf(e.getValue())))
-        ;
-    }
-
-    private static LanguageLevel getLanguageLevel(final JavaCompile javaCompile) {
-        switch (getSourceCompatibility(javaCompile)) {
-        case "0":
-        case "1.0":
-            return JAVA_1_0;
-        case "1":
-        case "1.1":
-            return JAVA_1_1;
-        case "2":
-        case "1.2":
-            return JAVA_1_2;
-        case "3":
-        case "1.3":
-            return JAVA_1_3;
-        case "4":
-        case "1.4":
-            return JAVA_1_4;
-        case "5":
-        case "1.5":
-            return JAVA_5;
-        case "6":
-        case "1.6":
-            return JAVA_6;
-        case "7":
-        case "1.7":
-            return JAVA_7;
-        case "8":
-        case "1.8":
-            return JAVA_8;
-        case "9":
-        case "1.9":
-            return JAVA_9;
-        case "10":
-        case "1.10":
-            return JAVA_10;
-        case "11":
-        case "1.11":
-            return JAVA_11;
-        case "12":
-        case "1.12":
-            return JAVA_12;
-        case "13":
-        case "1.13":
-            return JAVA_13;
-        case "14":
-        case "1.14":
-            return JAVA_14;
-        default:
-            return null;
         }
+
+        moduleNameByModuleInfoJavaPath_BySourceSetName.entries.stream()
+        .collect(
+            toImmutableSortedMap<Map.Entry<String, ImmutableSortedMap.Builder<Path, String>>, String, ImmutableSortedMap<Path, String>>(
+                naturalOrder(),
+                java.util.function.Function {it.key},
+                java.util.function.Function {it.value.build()}
+            )
+        )
     }
 
-    private static String getSourceCompatibility(final JavaCompile javaCompile) {
-        String sourceCompatibility = "";
-        final Iterator<String> argItr = javaCompile.getOptions().getAllCompilerArgs().iterator();
+    private fun getLanguageLevel(javaCompile: JavaCompile) =
+        when (getSourceCompatibility(javaCompile)) {
+             "0",  "1.0" -> JAVA_1_0
+             "1",  "1.1" -> JAVA_1_1
+             "2",  "1.2" -> JAVA_1_2
+             "3",  "1.3" -> JAVA_1_3
+             "4",  "1.4" -> JAVA_1_4
+             "5",  "1.5" -> JAVA_5
+             "6",  "1.6" -> JAVA_6
+             "7",  "1.7" -> JAVA_7
+             "8",  "1.8" -> JAVA_8
+             "9",  "1.9" -> JAVA_9
+            "10", "1.10" -> JAVA_10
+            "11", "1.11" -> JAVA_11
+            "12", "1.12" -> JAVA_12
+            "13", "1.13" -> JAVA_13
+            "14", "1.14" -> JAVA_14
+            else         -> null
+        }
+
+    private fun getSourceCompatibility(javaCompile: JavaCompile): String {
+        var sourceCompatibility = ""
+
+        val argItr = javaCompile.options.allCompilerArgs.iterator()
 
         while (argItr.hasNext()) {
-            final String arg = argItr.next();
+            val arg = argItr.next()
 
-            final String source = getOptionValueWhitespaceSeparator(OPTION_SOURCE, arg, argItr);
-            if (source != null) {
-                sourceCompatibility = source;
+            val source = getOptionValueWhitespaceSeparator(OPTION_SOURCE, arg, argItr)
+            if (source.isNotEmpty()) {
+                sourceCompatibility = source
             }
             else {
-                final String release = getOptionValueWhitespaceOrOtherSeparator(OPTION_RELEASE, '=', arg, argItr);
-                if (release != null) {
-                    sourceCompatibility = release;
+                val release = getOptionValueWhitespaceOrOtherSeparator(OPTION_RELEASE, '=', arg, argItr)
+                if (release.isNotEmpty()) {
+                    sourceCompatibility = release
                 }
             }
         }
 
-        return
-            sourceCompatibility.isEmpty()
-                ? javaCompile.getSourceCompatibility()
-                : sourceCompatibility
-        ;
+        return if (sourceCompatibility.isEmpty()) {
+            javaCompile.sourceCompatibility
+        }
+        else {
+            sourceCompatibility
+        }
     }
 
-    private static String getOptionValueWhitespaceSeparator(final String option, final String arg, final Iterator<String> argItr) {
-        if (option.equals(arg)) {
+    private fun getOptionValueWhitespaceSeparator(option: String, arg: String, argItr: Iterator<String>) =
+        if (option == arg) {
             if (argItr.hasNext()) {
-                return argItr.next();
+                argItr.next()
             }
             else {
-                throw new GradleException("Missing value for option " + option);
+                throw GradleException("Missing value for option " + option)
             }
         }
+        else {
+            ""
+        }
 
-        return null;
-    }
-
-    private static String getOptionValueWhitespaceOrOtherSeparator(
-        final String           option,
-        final char             otherSeparator,
-        final String           arg,
-        final Iterator<String> argItr
-    ) {
+    private fun getOptionValueWhitespaceOrOtherSeparator(option: String, otherSeparator: Char, arg: String, argItr: Iterator<String>): String {
         if (arg.startsWith(option)) {
-            if (arg.length() == option.length()) {
+            if (arg.length == option.length) {
                 if (argItr.hasNext()) {
-                    return argItr.next();
+                    return argItr.next()
                 }
                 else {
-                    throw new GradleException("Missing value for option " + option);
+                    throw GradleException("Missing value for option " + option)
                 }
             }
             else {
-                final int optionLength = option.length();
-                if (arg.charAt(optionLength) == otherSeparator) {
-                    return arg.substring(optionLength + 1);
+                val optionLength = option.length
+                if (arg[optionLength] == otherSeparator) {
+                    return arg.substring(optionLength + 1)
                 }
             }
         }
 
-        return null;
+        return ""
     }
     //</editor-fold>
+
+
+    companion object {
+        private val LOGGER = getLogger(JigsawPlugin::class.java)
+    }
 }

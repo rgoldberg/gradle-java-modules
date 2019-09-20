@@ -13,18 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.jdk;
+package org.gradle.java.jdk
 
-public interface Javac extends JavaSourceTool {
 
-    String OPTION_TARGET = "-target";
+interface Javac: JavaSourceTool {
 
-    // module options
-    String OPTION_DEFAULT_MODULE_FOR_CREATED_FILES = "--default-module-for-created-files";
-    String OPTION_MODULE_VERSION                   = "--module-version";
-    String OPTION_PREFER                           = "-Xprefer:";
-    String OPTION_PROCESSOR_MODULE_PATH            = "--processor-module-path";
+    companion object {
+        const val OPTION_TARGET = "-target"
 
-    // OPTION_PREFER values
-    String SOURCE = "source";
+        // module options
+        const val OPTION_DEFAULT_MODULE_FOR_CREATED_FILES = "--default-module-for-created-files"
+        const val OPTION_MODULE_VERSION                   = "--module-version"
+        const val OPTION_PREFER                           = "-Xprefer:"
+        const val OPTION_PROCESSOR_MODULE_PATH            = "--processor-module-path"
+
+        // OPTION_PREFER values
+        const val SOURCE = "source"
+    }
 }

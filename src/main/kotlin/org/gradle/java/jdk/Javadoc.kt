@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.jdk;
+package org.gradle.java.jdk
 
-public interface Javadoc extends JavaSourceTool {
 
-    String OPTION_EXPAND_REQUIRES      = "--expand-requires";
-    String OPTION_SHOW_MEMBERS         = "--show-members";
-    String OPTION_SHOW_MODULE_CONTENTS = "--show-module-contents";
-    String OPTION_SHOW_PACKAGES        = "--show-packages";
-    String OPTION_SHOW_TYPES           = "--show-types";
+interface Javadoc: JavaSourceTool {
 
-    // OPTION_EXPAND_REQUIRES values
-    String TRANSITIVE = "transitive";
+    companion object {
+        const val OPTION_EXPAND_REQUIRES      = "--expand-requires"
+        const val OPTION_SHOW_MEMBERS         = "--show-members"
+        const val OPTION_SHOW_MODULE_CONTENTS = "--show-module-contents"
+        const val OPTION_SHOW_PACKAGES        = "--show-packages"
+        const val OPTION_SHOW_TYPES           = "--show-types"
 
-    // OPTION_EXPAND_REQUIRES, OPTION_SHOW_MODULE_CONTENTS & OPTION_SHOW_PACKAGES values
-    String ALL = "all";
+        // OPTION_EXPAND_REQUIRES values
+        const val TRANSITIVE = "transitive"
 
-    // OPTION_SHOW_MEMBERS & OPTION_SHOW_TYPES values
-    String PUBLIC  = "public";
-    String PACKAGE = "package";
-    String PRIVATE = "private";
+        // OPTION_EXPAND_REQUIRES, OPTION_SHOW_MODULE_CONTENTS & OPTION_SHOW_PACKAGES values
+        const val ALL = "all"
+
+        // OPTION_SHOW_MEMBERS & OPTION_SHOW_TYPES values
+        const val PUBLIC  = "public"
+        const val PACKAGE = "package"
+        const val PRIVATE = "private"
+    }
 }

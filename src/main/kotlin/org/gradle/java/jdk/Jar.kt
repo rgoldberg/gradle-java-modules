@@ -13,15 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.jdk;
+package org.gradle.java.jdk
 
-public interface Jar {
 
-    // module options: create | update
-    String OPTION_HASH_MODULES   = "--hash-modules";
-    String OPTION_MODULE_PATH    = "--module-path";
-    String OPTION_MODULE_VERSION = "--module-version";
+interface Jar {
 
-    // module options: describe
-    String OPTION_DESCRIBE_MODULE = "--describe-module";
+    companion object {
+        // module options: create | update
+        const val OPTION_HASH_MODULES   = "--hash-modules"
+        const val OPTION_MODULE_PATH    = "--module-path"
+        const val OPTION_MODULE_VERSION = "--module-version"
+
+        // module options: describe
+        const val OPTION_DESCRIBE_MODULE = "--describe-module"
+    }
 }

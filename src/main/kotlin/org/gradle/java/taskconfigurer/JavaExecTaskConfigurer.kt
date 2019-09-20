@@ -13,63 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.taskconfigurer;
-
-import com.google.common.collect.ImmutableSet;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.tasks.JavaExec;
-import org.gradle.java.JigsawPlugin;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
-import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
-import static org.gradle.java.GradleUtils.setModuleNamesInputProperty;
-import static org.gradle.java.jdk.Java.OPTION_MODULE;
-import static org.gradle.java.jdk.JavaCommonTool.addModuleArguments;
-
-public class JavaExecTaskConfigurer implements TaskConfigurer<JavaExec> {
-
-    public JavaExecTaskConfigurer() {}
+package org.gradle.java.taskconfigurer
 
 
-    @Override
-    public Class<JavaExec> getTaskClass() {
-        return JavaExec.class;
-    }
+import com.google.common.collect.ImmutableSet
+import org.gradle.api.Action
+import org.gradle.api.tasks.JavaExec
+import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
+import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
+import org.gradle.java.GradleUtils.setModuleNamesInputProperty
+import org.gradle.java.JigsawPlugin
+import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE
+import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
 
-    @Override
-    public void configureTask(final JavaExec javaExec, final JigsawPlugin jigsawPlugin) {
-        final String main       = javaExec.getMain();
-        final String moduleName = jigsawPlugin.getModuleName(main);
 
-        if (moduleName != null) {
-            setModuleNamesInputProperty(javaExec, moduleName);
+class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
 
-            final FileCollection[] classpathHolder = new FileCollection[1];
+    override val taskClass
+    get() = JavaExec::class.java
 
-            doAfterAllOtherDoFirstActions(javaExec, task -> {
-                final FileCollection classpath = javaExec.getClasspath();
+    override fun configureTask(javaExec: JavaExec, jigsawPlugin: JigsawPlugin) {
+        val main = javaExec.main ?: return
 
-                classpathHolder[0] = classpath;
+        jigsawPlugin.getModuleName(main)?.let {moduleName ->
+            setModuleNamesInputProperty(javaExec, moduleName)
 
-                final List<String> args = new ArrayList<>();
+            val classpath by lazy {javaExec.classpath}
 
-                addModuleArguments(args, ImmutableSet.of(moduleName), classpath.getFiles());
+            doAfterAllOtherDoFirstActions(javaExec, Action {
+                val args = mutableListOf<String>()
 
-                args.add(OPTION_MODULE);
-                args.add(main);
+                addModuleArguments(args, ImmutableSet.of(moduleName), classpath.files)
 
-                javaExec.jvmArgs(args);
-                javaExec.setMain("");
-                javaExec.setClasspath(javaExec.getProject().files());
-            });
+                args += OPTION_MODULE
+                args += main
 
-            doBeforeAllOtherDoLastActions(javaExec, task -> {
-                javaExec.setMain(main);
-                javaExec.setClasspath(classpathHolder[0]);
-            });
+                javaExec.jvmArgs(args)
+                javaExec.main      = ""
+                javaExec.classpath = javaExec.project.files()
+            })
+
+            doBeforeAllOtherDoLastActions(javaExec, Action {
+                javaExec.main      = main
+                javaExec.classpath = classpath
+            })
         }
     }
 }

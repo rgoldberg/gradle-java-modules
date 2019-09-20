@@ -13,144 +13,121 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.taskconfigurer;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableMap;
-import org.gradle.api.Project;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.tasks.testing.Test;
-import org.gradle.java.JigsawPlugin;
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions;
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile;
-
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
-import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
-import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
-import static org.gradle.java.GradleUtils.getCompileSourceSetName;
-import static org.gradle.java.GradleUtils.getSourceSet;
-import static org.gradle.java.Modules.splitIntoModulePathAndPatchModule;
-import static org.gradle.java.testing.StandardTestFrameworkModuleInfo.getTestModuleNameCommaDelimitedString;
-
-import static java.io.File.pathSeparator;
-
-public class KotlinCompileTaskConfigurer implements TaskConfigurer<KotlinCompile> {
-
-    private static final Joiner PATH_JOINER = Joiner.on(pathSeparator);
-
-    private static final String TARGET = "Kotlin";
-
-    private static final String OPTION_ADD_MODULES = "-Xadd-modules=";
-    private static final String OPTION_MODULE_PATH = "-Xmodule-path=";
+package org.gradle.java.taskconfigurer
 
 
-    public KotlinCompileTaskConfigurer() {}
+import com.google.common.collect.ImmutableCollection
+import java.io.File.pathSeparator
+import org.gradle.api.Action
+import org.gradle.api.file.FileCollection
+import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
+import org.gradle.api.tasks.testing.Test
+import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
+import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
+import org.gradle.java.GradleUtils.getCompileSourceSetName
+import org.gradle.java.GradleUtils.getSourceSet
+import org.gradle.java.JigsawPlugin
+import org.gradle.java.Modules.splitIntoModulePathAndPatchModule
+import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
-    @Override
-    public Class<KotlinCompile> getTaskClass() {
-        return KotlinCompile.class;
-    }
+class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
-    @Override
-    public void configureTask(final KotlinCompile kotlinCompile, final JigsawPlugin jigsawPlugin) {
-        final String sourceSetName = getCompileSourceSetName(kotlinCompile, TARGET);
+    override val taskClass
+    get() = KotlinCompile::class.java
 
-        final ImmutableMap<Path, String> moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName);
+    override fun configureTask(kotlinCompile: KotlinCompile, jigsawPlugin: JigsawPlugin) {
+        val sourceSetName = getCompileSourceSetName(kotlinCompile, TARGET)
+
+        val moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName)
 
         if (moduleNameIbyModuleInfoJavaPath.isEmpty()) {
             //TODO: use better heuristic to determine if kotlinCompile is for test code
-            if (TEST_SOURCE_SET_NAME.equals(sourceSetName)) {
+            if (TEST_SOURCE_SET_NAME == sourceSetName) {
                 // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
-                jigsawPlugin.setModuleNamesInputProperty(kotlinCompile);
+                jigsawPlugin.setModuleNamesInputProperty(kotlinCompile)
 
-                final FileCollection[] classpathHolder = new FileCollection[1];
+                val classpath by lazy {kotlinCompile.classpath}
 
-                doAfterAllOtherDoFirstActions(kotlinCompile, task -> {
-                    final FileCollection classpath = kotlinCompile.getClasspath();
-
-                    classpathHolder[0] = classpath;
-
-                    final Project project = kotlinCompile.getProject();
+                doAfterAllOtherDoFirstActions(kotlinCompile, Action {
+                    val project = kotlinCompile.project
 
                     //TODO: .getCompileTaskName(LANGUAGE_NAME_KOTLIN)
-                    final List<String> args =
+                    val args =
                         configureTask(
                             kotlinCompile,
-                            jigsawPlugin.getModuleNameIsset(),
-                            classpath.plus(getSourceSet(project, TEST_SOURCE_SET_NAME).getAllSource().getSourceDirectories()) //TODO? getAllSource()
+                            jigsawPlugin.moduleNameIsset,
+                            classpath + getSourceSet(project, TEST_SOURCE_SET_NAME).allSource.sourceDirectories //TODO? allSource
                         )
-                    ;
 
                     //TODO: ensure works
-                    project.getTasks().withType(Test.class).configureEach(test -> {
-                        final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
+                    project.tasks.withType(Test::class.java).configureEach {test ->
+                        val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
 
-                        if (! testModuleNameCommaDelimitedString.isEmpty()) {
-                            args.add(OPTION_ADD_MODULES + testModuleNameCommaDelimitedString);
+                        if (testModuleNameCommaDelimitedString.isNotEmpty()) {
+                            args += OPTION_ADD_MODULES + testModuleNameCommaDelimitedString
                         }
-                    });
-                });
+                    }
+                })
 
-                doBeforeAllOtherDoLastActions(kotlinCompile, task -> kotlinCompile.setClasspath(classpathHolder[0]));
+                doBeforeAllOtherDoLastActions(kotlinCompile, Action {kotlinCompile.classpath = classpath})
             }
         }
         else {
             // source set contains at least one module-info.java
-            final FileCollection[] classpathHolder = new FileCollection[1];
+            val classpath by lazy {kotlinCompile.classpath}
 
-            doAfterAllOtherDoFirstActions(kotlinCompile, task -> {
-                final FileCollection classpath = kotlinCompile.getClasspath();
-
-                classpathHolder[0] = classpath;
-
-                final ImmutableCollection<String> moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values();
+            doAfterAllOtherDoFirstActions(kotlinCompile, Action {
+                val moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values
 
                 //TODO: FILTER BASED ON PRESENCE OF MODULE
-                configureTask(kotlinCompile, moduleNameIcoll, classpath);
-            });
+                configureTask(kotlinCompile, moduleNameIcoll, classpath)
+            })
 
-            doBeforeAllOtherDoLastActions(kotlinCompile, task -> kotlinCompile.setClasspath(classpathHolder[0]));
+            doBeforeAllOtherDoLastActions(kotlinCompile, Action {kotlinCompile.classpath = classpath})
         }
     }
 
-    private List<String> configureTask(final KotlinCompile kotlinCompile, final ImmutableCollection<String> moduleNameIcoll, final FileCollection classpath) {
-        final KotlinJvmOptions kotlinJvmOptions = kotlinCompile.getKotlinOptions();
+    private fun configureTask(kotlinCompile: KotlinCompile, moduleNameIcoll: ImmutableCollection<String>, classpath: FileCollection): MutableList<String> {
+        val kotlinJvmOptions = kotlinCompile.kotlinOptions
 
-        final List<String> args = new ArrayList<>(kotlinJvmOptions.getFreeCompilerArgs());
+        val args = ArrayList(kotlinJvmOptions.freeCompilerArgs)
 
-        kotlinJvmOptions.setFreeCompilerArgs(args);
+        kotlinJvmOptions.freeCompilerArgs = args
 
         splitIntoModulePathAndPatchModule(
-            classpath.getFiles(),
+            classpath.files,
             moduleNameIcoll,
-            modulePathFileList ->
-                args.add(
-                    PATH_JOINER.appendTo(
-                        new StringBuilder(
-                            OPTION_MODULE_PATH.length()
-                            + modulePathFileList.size()
+            {modulePathFileList ->
+                args +=
+                    modulePathFileList.joinTo(
+                        StringBuilder(
+                            OPTION_MODULE_PATH.length
+                            + modulePathFileList.size
                             - 1
-                            + modulePathFileList.stream().mapToInt(patchModuleFile -> patchModuleFile.toString().length()).sum()
+                            + modulePathFileList.stream().mapToInt {patchModuleFile -> patchModuleFile.toString().length}.sum()
                         )
                         .append(OPTION_MODULE_PATH),
-                        modulePathFileList
+                        pathSeparator
                     )
                     .toString()
-                )
-            ,
-            patchModuleFileList -> {
+            },
+            {patchModuleFileList ->
                 //TODO: find kotlinc equivalent for javac's --patch-module
             }
-        );
+        )
 
-        kotlinCompile.setClasspath(kotlinCompile.getProject().files());
+        kotlinCompile.classpath = kotlinCompile.project.files()
 
-        return args;
+        return args
+    }
+
+
+    companion object {
+        private const val TARGET = "Kotlin"
+
+        private const val OPTION_ADD_MODULES = "-Xadd-modules="
+        private const val OPTION_MODULE_PATH = "-Xmodule-path="
     }
 }

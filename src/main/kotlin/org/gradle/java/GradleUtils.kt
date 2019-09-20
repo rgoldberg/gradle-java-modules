@@ -13,166 +13,150 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java;
-
-import org.gradle.api.Action;
-import org.gradle.api.Describable;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.TaskContainer;
-import org.gradle.api.tasks.compile.JavaCompile;
-
-import java.util.List;
-import java.util.ListIterator;
-
-import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
-
-import static java.lang.Character.toLowerCase;
-
-public class GradleUtils {
-
-    private static final String PROPERTY_NAME_MODULE_NAMES = "moduleNames";
-
-    private static final String VERB_COMPILE = "compile";
-
-    private static final String TARGET_JAVA = "Java";
-
-    private static final String DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action";
+package org.gradle.java
 
 
-    @Deprecated
-    private GradleUtils() {
-        throw new AssertionError("Should never execute");
+import org.gradle.api.Action
+import org.gradle.api.Describable
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.compile.JavaCompile
+
+
+object GradleUtils {
+
+    private class DoFirstAction<T> internal constructor(private val delegate: Action<in T>): Action<T>, Describable {
+
+        override fun execute(t: T) =
+            delegate.execute(t)
+
+        override fun getDisplayName() =
+            DO_FIRST_ACTION_DISPLAY_NAME
     }
+
+
+    private const val PROPERTY_NAME_MODULE_NAMES = "moduleNames"
+
+    private const val VERB_COMPILE = "compile"
+
+    private const val TARGET_JAVA = "Java"
+
+    private const val DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action"
 
 
     //<editor-fold desc="Task helper methods">
-    public static void doAfterAllOtherDoFirstActions(final Task task, final Action<? super Task> action) {
-        final List<Action<? super Task>> actionList = task.getActions();
+    @JvmStatic
+    fun doAfterAllOtherDoFirstActions(task: Task, action: Action<in Task>) {
+        val actionList = task.actions
 
-        for (final ListIterator<Action<? super Task>> actionLitr = actionList.listIterator(actionList.size()); actionLitr.hasPrevious();) {
-            final Action<? super Task> existingAction = actionLitr.previous();
+        val actionLitr = actionList.listIterator(actionList.size)
+        while (actionLitr.hasPrevious()) {
+            val existingAction = actionLitr.previous()
 
             if (
-                existingAction instanceof Describable &&
-                DO_FIRST_ACTION_DISPLAY_NAME.equals(((Describable) existingAction).getDisplayName())
+                existingAction is Describable &&
+                DO_FIRST_ACTION_DISPLAY_NAME == (existingAction as Describable).displayName
             ) {
-                actionList.add(actionLitr.nextIndex() + 1, new DoFirstAction<>(action));
-                return;
+                actionList.add(actionLitr.nextIndex() + 1, DoFirstAction(action))
+                return
             }
         }
 
-        task.doFirst(action);
+        task.doFirst(action)
     }
 
-    private static class DoFirstAction<T> implements Action<T>, Describable {
+    @JvmStatic
+    fun doBeforeAllOtherDoLastActions(task: Task, action: Action<in Task>) {
+        val actionList = task.actions
 
-        private final Action<? super T> delegate;
-
-
-        DoFirstAction(final Action<? super T> delegate) {
-            this.delegate = delegate;
-        }
-
-
-        @Override
-        public void execute(final T t) {
-            delegate.execute(t);
-        }
-
-        @Override
-        public String getDisplayName() {
-            return DO_FIRST_ACTION_DISPLAY_NAME;
-        }
-    }
-
-    public static void doBeforeAllOtherDoLastActions(final Task task, final Action<? super Task> action) {
-        final List<Action<? super Task>> actionList = task.getActions();
-
-        for (final ListIterator<Action<? super Task>> actionLitr = actionList.listIterator(); actionLitr.hasNext();) {
-            final Action<? super Task> existingAction = actionLitr.next();
+        val actionLitr = actionList.listIterator()
+        while (actionLitr.hasNext()) {
+            val existingAction = actionLitr.next()
 
             if (
-                existingAction instanceof Describable &&
-                "Execute doLast {} action".equals(((Describable) existingAction).getDisplayName())
+                existingAction is Describable &&
+                "Execute doLast {} action" == (existingAction as Describable).displayName
             ) {
-                actionList.add(actionLitr.previousIndex(), action);
-                return;
+                actionList.add(actionLitr.previousIndex(), action)
+                return
             }
         }
 
-        task.doLast(action);
+        task.doLast(action)
     }
     //</editor-fold>
 
 
     //<editor-fold desc="SourceSet helper methods">
-    public static SourceSetContainer getSourceSets(final Project project) {
-        return project.getExtensions().getByType(SourceSetContainer.class);
-    }
+    @JvmStatic
+    fun getSourceSets(project: Project) =
+        project.extensions.getByType(SourceSetContainer::class.java)
 
-    public static SourceSet getSourceSet(final JavaCompile javaCompile) {
-        return getCompileSourceSet(javaCompile, TARGET_JAVA);
-    }
+    @JvmStatic
+    fun getSourceSet(javaCompile: JavaCompile) =
+        getCompileSourceSet(javaCompile, TARGET_JAVA)
 
-    public static SourceSet getCompileSourceSet(final Task task, final String target) {
-        return getSourceSet(task, VERB_COMPILE, target);
-    }
+    @JvmStatic
+    fun getCompileSourceSet(task: Task, target: String) =
+        getSourceSet(task, VERB_COMPILE, target)
 
-    public static SourceSet getSourceSet(final Task task, final String verb, final String target) {
-        return getSourceSet(task.getProject(), task.getName(), verb, target);
-    }
+    @JvmStatic
+    fun getSourceSet(task: Task, verb: String, target: String) =
+        getSourceSet(task.project, task.name, verb, target)
 
-    public static SourceSet getSourceSet(final Project project, final String taskName, final String verb, final String target) {
-        return getSourceSet(project, getSourceSetName(taskName, verb, target));
-    }
+    @JvmStatic
+    fun getSourceSet(project: Project, taskName: String, verb: String, target: String) =
+        getSourceSet(project, getSourceSetName(taskName, verb, target))
 
-    public static SourceSet getSourceSet(final Project project, final String sourceSetName) {
-        return getSourceSets(project).getByName(sourceSetName);
-    }
+    @JvmStatic
+    fun getSourceSet(project: Project, sourceSetName: String) =
+        getSourceSets(project).getByName(sourceSetName)
 
 
-    public static String getSourceSetName(final JavaCompile javaCompile) {
-        return getCompileSourceSetName(javaCompile, TARGET_JAVA);
-    }
+    @JvmStatic
+    fun getSourceSetName(javaCompile: JavaCompile) =
+        getCompileSourceSetName(javaCompile, TARGET_JAVA)
 
-    public static String getCompileSourceSetName(final Task task, final String target) {
-        return getSourceSetName(task, VERB_COMPILE, target);
-    }
+    @JvmStatic
+    fun getCompileSourceSetName(task: Task, target: String) =
+        getSourceSetName(task, VERB_COMPILE, target)
 
-    public static String getSourceSetName(final Task task, final String verb, final String target) {
-        return getSourceSetName(task.getName(), verb, target);
-    }
+    @JvmStatic
+    fun getSourceSetName(task: Task, verb: String, target: String) =
+        getSourceSetName(task.name, verb, target)
 
-    public static String getSourceSetName(final String taskName, final String verb, final String target) {
-        final int taskNameLength   = taskName.length();
-        final int verbLength       = verb.length();
-        final int targetLength     = target.length();
-        final int verbTargetLength = verbLength + targetLength;
+    @JvmStatic
+    fun getSourceSetName(taskName: String, verb: String, target: String): String {
+        val taskNameLength   = taskName.length
+        val verbLength       = verb.length
+        val targetLength     = target.length
+        val verbTargetLength = verbLength + targetLength
 
-        if (taskNameLength == verbTargetLength) {
-            return MAIN_SOURCE_SET_NAME;
+        return if (taskNameLength == verbTargetLength) {
+            MAIN_SOURCE_SET_NAME
         }
         else {
-            final StringBuilder sb = new StringBuilder(taskNameLength - verbTargetLength);
-            sb.append(toLowerCase(taskName.charAt(verbLength)));
-            sb.append(taskName, verbLength + 1, taskNameLength - targetLength);
-            return sb.toString();
+            val sb = StringBuilder(taskNameLength - verbTargetLength)
+            sb.append(taskName[verbLength].toLowerCase())
+            sb.append(taskName, verbLength + 1, taskNameLength - targetLength)
+            sb.toString()
         }
     }
 
 
-    public static JavaCompile getJavaCompile(final TaskContainer tasks, final SourceSet sourceSet) {
-        return (JavaCompile) tasks.getByName(sourceSet.getCompileJavaTaskName());
-    }
+    @JvmStatic
+    fun getJavaCompile(tasks: TaskContainer, sourceSet: SourceSet) =
+        tasks.getByName(sourceSet.compileJavaTaskName) as JavaCompile
     //</editor-fold>
 
 
     //<editor-fold desc="moduleNames input property helper methods">
-    public static void setModuleNamesInputProperty(final Task task, final String moduleNamesCommaDelimited) {
-        task.getInputs().property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited);
-    }
+    @JvmStatic
+    fun setModuleNamesInputProperty(task: Task, moduleNamesCommaDelimited: String) =
+        task.inputs.property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited)
     //</editor-fold>
 }

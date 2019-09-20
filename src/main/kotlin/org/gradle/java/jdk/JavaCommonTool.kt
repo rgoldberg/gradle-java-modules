@@ -13,60 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.jdk;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableCollection;
-
-import java.io.File;
-import java.util.List;
-import java.util.Set;
-
-import static org.gradle.java.Modules.splitIntoModulePathAndPatchModule;
-
-import static java.io.File.pathSeparator;
-
-public interface JavaCommonTool {
-
-    String OPTION_ADD_EXPORTS         = "--add-exports";
-    String OPTION_ADD_MODULES         = "--add-modules";
-    String OPTION_ADD_READS           = "--add-reads";
-    String OPTION_CLASS_PATH          = "--class-path";
-    String OPTION_LIMIT_MODULES       = "--limit-modules";
-    String OPTION_MODULE              = "--module";
-    String OPTION_MODULE_PATH         = "--module-path";
-    String OPTION_PATCH_MODULE        = "--patch-module";
-    String OPTION_UPGRADE_MODULE_PATH = "--upgrade-module-path";
-
-    String ALL_MODULE_PATH = "ALL-MODULE-PATH";
-    String ALL_SYSTEM      = "ALL-SYSTEM";
-
-    String ALL_UNNAMED = "ALL-UNNAMED";
-
-    Joiner PATH_JOINER = Joiner.on(pathSeparator);
+package org.gradle.java.jdk
 
 
-    static void addModuleArguments(final List<String> args, final ImmutableCollection<String> moduleNameIcoll, final Set<File> classpathFileSet) {
-        splitIntoModulePathAndPatchModule(
-            classpathFileSet,
-            moduleNameIcoll,
-            modulePathFileList -> {
-                args.add(OPTION_MODULE_PATH);
-                args.add(PATH_JOINER.join(modulePathFileList));
-            },
-            patchModuleFileList -> {
-                // moduleNameIcoll is guaranteed to have exactly one element
-                final String moduleName = moduleNameIcoll.iterator().next();
+import com.google.common.collect.ImmutableCollection
+import java.io.File
+import java.io.File.pathSeparator
+import org.gradle.java.Modules.splitIntoModulePathAndPatchModule
 
-                int sbLength = moduleName.length() + patchModuleFileList.size();
 
-                for (final File patchModuleFile : patchModuleFileList) {
-                    sbLength += patchModuleFile.toString().length();
+interface JavaCommonTool {
+
+    companion object {
+        const val OPTION_ADD_EXPORTS         = "--add-exports"
+        const val OPTION_ADD_MODULES         = "--add-modules"
+        const val OPTION_ADD_READS           = "--add-reads"
+        const val OPTION_CLASS_PATH          = "--class-path"
+        const val OPTION_LIMIT_MODULES       = "--limit-modules"
+        const val OPTION_MODULE              = "--module"
+        const val OPTION_MODULE_PATH         = "--module-path"
+        const val OPTION_PATCH_MODULE        = "--patch-module"
+        const val OPTION_UPGRADE_MODULE_PATH = "--upgrade-module-path"
+
+        const val ALL_MODULE_PATH = "ALL-MODULE-PATH"
+        const val ALL_SYSTEM      = "ALL-SYSTEM"
+
+        const val ALL_UNNAMED = "ALL-UNNAMED"
+
+
+        @JvmStatic
+        fun addModuleArguments(args: MutableList<String>, moduleNameIcoll: ImmutableCollection<String>, classpathFileSet: Set<File>) {
+            splitIntoModulePathAndPatchModule(
+                classpathFileSet,
+                moduleNameIcoll,
+                {modulePathFileList ->
+                    args += OPTION_MODULE_PATH
+                    args += modulePathFileList.joinToString(pathSeparator)
+                },
+                {patchModuleFileList ->
+                    // moduleNameIcoll is guaranteed to have exactly one element
+                    val moduleName = moduleNameIcoll.iterator().next()
+
+                    args += OPTION_PATCH_MODULE
+                    args +=
+                        patchModuleFileList.joinTo(
+                            StringBuilder(moduleName.length + patchModuleFileList.size + patchModuleFileList.sumBy {it.toString().length})
+                            .append(moduleName)
+                            .append('='),
+                            pathSeparator
+                        )
+                        .toString()
                 }
-
-                args.add(OPTION_PATCH_MODULE);
-                args.add(PATH_JOINER.appendTo(new StringBuilder(sbLength).append(moduleName).append('='), patchModuleFileList).toString());
-            }
-        );
+            )
+        }
     }
 }

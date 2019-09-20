@@ -13,48 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.taskconfigurer;
-
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.tasks.javadoc.Javadoc;
-import org.gradle.external.javadoc.CoreJavadocOptions;
-import org.gradle.java.JigsawPlugin;
-
-import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
-import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
-import static org.gradle.java.jdk.Javadoc.OPTION_MODULE_PATH;
-
-public class JavadocTaskConfigurer implements TaskConfigurer<Javadoc> {
-
-    private static final String JAVADOC_TASK_OPTION_MODULE_PATH = OPTION_MODULE_PATH.substring(1);
+package org.gradle.java.taskconfigurer
 
 
-    public JavadocTaskConfigurer() {}
+import org.gradle.api.Action
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.external.javadoc.CoreJavadocOptions
+import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
+import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
+import org.gradle.java.JigsawPlugin
+import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE_PATH
 
 
-    @Override
-    public Class<Javadoc> getTaskClass() {
-        return Javadoc.class;
+class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
+
+    override val taskClass
+    get() = Javadoc::class.java
+
+    override fun configureTask(javadoc: Javadoc, jigsawPlugin: JigsawPlugin) {
+        jigsawPlugin.setModuleNamesInputProperty(javadoc)
+
+        val classpath by lazy {javadoc.classpath}
+
+        doAfterAllOtherDoFirstActions(javadoc, Action {
+            if (! classpath.isEmpty) {
+                (javadoc.options as CoreJavadocOptions).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.asPath)
+
+                javadoc.classpath = javadoc.project.files()
+            }
+        })
+
+        doBeforeAllOtherDoLastActions(javadoc, Action {javadoc.classpath = classpath})
     }
 
-    @Override
-    public void configureTask(final Javadoc javadoc, final JigsawPlugin jigsawPlugin) {
-        jigsawPlugin.setModuleNamesInputProperty(javadoc);
 
-        final FileCollection[] classpathHolder = new FileCollection[1];
-
-        doAfterAllOtherDoFirstActions(javadoc, task -> {
-            final FileCollection classpath = javadoc.getClasspath();
-
-            classpathHolder[0] = classpath;
-
-            if (! classpath.isEmpty()) {
-                ((CoreJavadocOptions) javadoc.getOptions()).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.getAsPath());
-
-                javadoc.setClasspath(javadoc.getProject().files());
-            }
-        });
-
-        doBeforeAllOtherDoLastActions(javadoc, task -> javadoc.setClasspath(classpathHolder[0]));
+    companion object {
+        private val JAVADOC_TASK_OPTION_MODULE_PATH = OPTION_MODULE_PATH.substring(1)
     }
 }

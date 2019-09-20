@@ -13,93 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableCollection;
-import org.gradle.api.GradleException;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
-
-import static java.lang.System.lineSeparator;
-import static java.nio.file.Files.isDirectory;
-import static java.nio.file.Files.newDirectoryStream;
-
-public class Modules {
-
-    private static final String LS          = lineSeparator();
-    private static final Joiner LINE_JOINER = Joiner.on(LS);
+package org.gradle.java
 
 
-    @Deprecated
-    private Modules() {
-        throw new AssertionError("Should never execute");
-    }
+import com.google.common.collect.ImmutableCollection
+import java.io.File
+import java.io.IOException
+import java.lang.System.lineSeparator
+import java.nio.file.Files.isDirectory
+import java.nio.file.Files.newDirectoryStream
+import java.nio.file.Path
+import org.gradle.api.GradleException
 
 
-    public static void splitIntoModulePathAndPatchModule(
-        final Set<File>                    classpathFileSet,
-        final ImmutableCollection<String>  moduleNameIcoll,
-        final Consumer<? super List<File>> modulePathConsumer,
-        final Consumer<? super List<File>> patchModuleConsumer
+object Modules {
+
+    private val LS = lineSeparator()
+
+
+    fun splitIntoModulePathAndPatchModule(
+        classpathFileSet:    Set<File>,
+        moduleNameIcoll:     ImmutableCollection<String>,
+        modulePathConsumer:  (List<File>) -> Unit,
+        patchModuleConsumer: (List<File>) -> Unit
     ) {
         // determine which classpath elements will be in --module-path, and which in --patch-module
-        final int classpathFileCount = classpathFileSet.size();
+        val classpathFileCount  = classpathFileSet.size
+        val modulePathFileList  = ArrayList<File>(classpathFileCount)
+        val patchModuleFileList = ArrayList<File>(classpathFileCount)
 
-        final List<File>  modulePathFileList = new ArrayList<>(classpathFileCount);
-        final List<File> patchModuleFileList = new ArrayList<>(classpathFileCount);
-
-        for (final File classpathFile : classpathFileSet) {
+        for (classpathFile in classpathFileSet) {
             if (containsModules(classpathFile.toPath())) {
                 // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
-                modulePathFileList.add(classpathFile);
+                modulePathFileList += classpathFile
             }
             else {
                 // directories that don't contain module-info.class or *.jar files
-                patchModuleFileList.add(classpathFile);
+                patchModuleFileList += classpathFile
             }
         }
 
         // add module arguments
-        if (! modulePathFileList.isEmpty()) {
-            modulePathConsumer.accept(modulePathFileList);
+        if (modulePathFileList.isNotEmpty()) {
+            modulePathConsumer(modulePathFileList)
         }
 
         if (
-            ! patchModuleFileList.isEmpty() &&
-            !     moduleNameIcoll.isEmpty()
+            patchModuleFileList.isNotEmpty() &&
+                moduleNameIcoll.isNotEmpty()
         ) {
-            if (moduleNameIcoll.size() > 1) {
-                throw new GradleException(
+            if (moduleNameIcoll.size > 1) {
+                throw GradleException(
                     "Cannot determine into which of the multiple modules to patch the non-module directories."                             + LS + LS
                     + "To avoid this problem, either only have one module per source set, or modularize the currently non-modular source." + LS + LS
-                    + "Modules:"                                                    + LS + LS + LINE_JOINER.join(moduleNameIcoll)          + LS + LS
-                    + "Directories containing non-modular source and/or resources:" + LS + LS + LINE_JOINER.join(patchModuleFileList)
-                );
+                    + "Modules:"                                                    + LS + LS + moduleNameIcoll    .joinToString(LS)       + LS + LS
+                    + "Directories containing non-modular source and/or resources:" + LS + LS + patchModuleFileList.joinToString(LS)
+                )
             }
 
-            patchModuleConsumer.accept(patchModuleFileList);
+            patchModuleConsumer(patchModuleFileList)
         }
     }
 
     // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
-    private static boolean containsModules(final Path dirPath) {
-        if (! isDirectory(dirPath)) {
-            return true;
+    private fun containsModules(dirPath: Path) =
+        try {
+            ! isDirectory(dirPath)
+            || newDirectoryStream(dirPath, "{module-info.class,*.jar}").use {it.iterator().hasNext()}
         }
-
-        try (DirectoryStream<Path> ds = newDirectoryStream(dirPath, "{module-info.class,*.jar}")) {
-            return ds.iterator().hasNext();
+        catch (ex: IOException) {
+            throw GradleException("Could not determine if directory contains modules: " + dirPath, ex)
         }
-        catch (final IOException ex) {
-            throw new GradleException("Could not determine if directory contains modules: " + dirPath, ex);
-        }
-    }
 }

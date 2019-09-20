@@ -13,49 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.testing;
-
-import org.gradle.api.internal.tasks.testing.junit.JUnitTestFramework;
-import org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestFramework;
-import org.gradle.api.internal.tasks.testing.testng.TestNGTestFramework;
-
-import static com.google.common.collect.Maps.uniqueIndex;
-
-import static java.util.Arrays.asList;
-
-public enum StandardTestFrameworkModuleInfo implements TestFrameworkModuleInfo {
-    JUNIT4( JUnitTestFramework        .class.getName(), "junit"),
-    JUNIT5( JUnitPlatformTestFramework.class.getName(), "org.junit.jupiter.api"),
-    TESTNG( TestNGTestFramework       .class.getName(), "testng"),
-    UNKNOWN("",                                         "");
+package org.gradle.java.testing
 
 
-    private static final ImmutableMap<String, StandardTestFrameworkModuleInfo> TEST_FRAMEWORK_MODULE_INFO_IBY_CLASS_NAME =
-        uniqueIndex(asList(values()), testFrameworkModuleInfo -> testFrameworkModuleInfo.testFrameworkClassName)
-    ;
+import com.google.common.collect.Maps.uniqueIndex
+import org.gradle.api.internal.tasks.testing.junit.JUnitTestFramework
+import org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestFramework
+import org.gradle.api.internal.tasks.testing.testng.TestNGTestFramework
+import org.gradle.api.tasks.testing.Test
+import org.gradle.java.testing.StandardTestFrameworkModuleInfo.Companion.from
 
 
-    public static StandardTestFrameworkModuleInfo from(final Test test) {
-        return TEST_FRAMEWORK_MODULE_INFO_IBY_CLASS_NAME.getOrDefault(test.getTestFramework().getClass().getName(), UNKNOWN);
-    }
-
-    public static String getTestModuleNameCommaDelimitedString(final Test test) {
-        return from(test).getTestModuleNameCommaDelimitedString();
-    }
+fun getTestModuleNameCommaDelimitedString(test: Test) =
+    from(test).testModuleNameCommaDelimitedString
 
 
-    private final String testFrameworkClassName;
-    private final String testModuleNameCommaDelimitedString;
+enum class StandardTestFrameworkModuleInfo(
+    private  val testFrameworkClassName:             String,
+    override val testModuleNameCommaDelimitedString: String
+):
+TestFrameworkModuleInfo {
+    JUNIT4( JUnitTestFramework        ::class.java.name, "junit"),
+    JUNIT5( JUnitPlatformTestFramework::class.java.name, "org.junit.jupiter.api"),
+    TESTNG( TestNGTestFramework       ::class.java.name, "testng"),
+    UNKNOWN("",                                          "");
 
 
-    StandardTestFrameworkModuleInfo(final String testFrameworkClassName, final String testModuleNameCommaDelimitedString) {
-        this.testFrameworkClassName             = testFrameworkClassName;
-        this.testModuleNameCommaDelimitedString = testModuleNameCommaDelimitedString;
-    }
+    companion object {
+        private val TEST_FRAMEWORK_MODULE_INFO_IBY_CLASS_NAME =
+            uniqueIndex(listOf(*values())) {it!!.testFrameworkClassName}
 
-
-    @Override
-    public String getTestModuleNameCommaDelimitedString() {
-        return testModuleNameCommaDelimitedString;
+        fun from(test: Test) =
+            TEST_FRAMEWORK_MODULE_INFO_IBY_CLASS_NAME.getOrDefault(test.testFramework.javaClass.name, UNKNOWN)
     }
 }

@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.jdk;
+package org.gradle.java.jdk
 
-public interface Java extends JavaCommonTool {
 
-    // module options
-    String OPTION_ADD_OPENS              = "--add-opens";
-    String OPTION_DESCRIBE_MODULE        = "--describe-module";
-    String OPTION_ILLEGAL_ACCESS         = "--illegal-access=";
-    String OPTION_LIST_MODULES           = "--list-modules";
-    String OPTION_SHOW_MODULE_RESOLUTION = "--show-module-resolution";
-    String OPTION_VALIDATE_MODULES       = "--validate-modules";
+interface Java: JavaCommonTool {
 
-    // OPTION_ADD_MODULES values
-    String ALL_DEFAULT = "ALL-DEFAULT";
+    companion object {
+        // module options
+        const val OPTION_ADD_OPENS              = "--add-opens"
+        const val OPTION_DESCRIBE_MODULE        = "--describe-module"
+        const val OPTION_ILLEGAL_ACCESS         = "--illegal-access="
+        const val OPTION_LIST_MODULES           = "--list-modules"
+        const val OPTION_SHOW_MODULE_RESOLUTION = "--show-module-resolution"
+        const val OPTION_VALIDATE_MODULES       = "--validate-modules"
 
-    // OPTION_ILLEGAL_ACCESS values
-    String PERMIT = "permit";
-    String WARN   = "warn";
-    String DEBUG  = "debug";
-    String DENY   = "deny";
+        // OPTION_ADD_MODULES values
+        const val ALL_DEFAULT = "ALL-DEFAULT"
+
+        // OPTION_ILLEGAL_ACCESS values
+        const val PERMIT = "permit"
+        const val WARN   = "warn"
+        const val DEBUG  = "debug"
+        const val DENY   = "deny"
+    }
 }

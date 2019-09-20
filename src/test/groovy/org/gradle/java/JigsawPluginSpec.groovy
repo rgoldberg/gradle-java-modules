@@ -15,6 +15,7 @@
  */
 package org.gradle.java
 
+
 import org.gradle.api.JavaVersion
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
@@ -26,6 +27,7 @@ import spock.lang.Specification
 import static org.gradle.api.JavaVersion.VERSION_1_9
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import static org.gradle.util.TextUtil.getWindowsLineSeparator
+
 
 class JigsawPluginSpec extends Specification {
 
@@ -68,6 +70,7 @@ module test.module {
         tmpDir.newFile('src/main/java/com/example/AClass.java') << '''\
 package com.example;
 
+
 public class AClass {
 
   public void aMethod(String aString) {
@@ -83,9 +86,11 @@ public class AClass {
         tmpDir.newFile('src/test/java/com/example/AClassTest.java') << '''\
 package com.example;
 
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
+
 
 public class AClassTest {
 

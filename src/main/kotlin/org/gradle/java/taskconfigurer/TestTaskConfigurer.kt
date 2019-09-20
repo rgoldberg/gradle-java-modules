@@ -13,59 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.taskconfigurer;
-
-import com.google.common.collect.ImmutableSortedSet;
-import org.gradle.api.GradleException;
-import org.gradle.api.Project;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.RelativePath;
-import org.gradle.api.internal.file.RelativeFile;
-import org.gradle.api.internal.tasks.testing.detection.TestFrameworkDetector;
-import org.gradle.api.tasks.testing.Test;
-import org.gradle.java.JigsawPlugin;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
-import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
-import static org.gradle.java.jdk.Java.ALL_MODULE_PATH;
-import static org.gradle.java.jdk.Java.OPTION_ADD_MODULES;
-import static org.gradle.java.jdk.Java.OPTION_ADD_READS;
-import static org.gradle.java.jdk.JavaCommonTool.addModuleArguments;
-import static org.gradle.java.testing.StandardTestFrameworkModuleInfo.getTestModuleNameCommaDelimitedString;
-
-import static java.io.File.createTempFile;
-import static java.nio.file.Files.copy;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-
-public class TestTaskConfigurer implements TaskConfigurer<Test> {
-
-    public TestTaskConfigurer() {}
+package org.gradle.java.taskconfigurer
 
 
-    @Override
-    public Class<Test> getTaskClass() {
-        return Test.class;
-    }
+import java.io.IOException
+import java.nio.file.Files.copy
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import org.gradle.api.Action
+import org.gradle.api.GradleException
+import org.gradle.api.file.RelativePath
+import org.gradle.api.internal.file.RelativeFile
+import org.gradle.api.tasks.testing.Test
+import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
+import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
+import org.gradle.java.JigsawPlugin
+import org.gradle.java.jdk.JavaCommonTool.Companion.ALL_MODULE_PATH
+import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_MODULES
+import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_READS
+import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
+import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
 
-    @Override
-    public void configureTask(final Test test, final JigsawPlugin jigsawPlugin) {
-        jigsawPlugin.setModuleNamesInputProperty(test);
 
-        final FileCollection[] classpathHolder = new FileCollection[1];
+class TestTaskConfigurer: TaskConfigurer<Test> {
 
-        doAfterAllOtherDoFirstActions(test, task -> {
-            final FileCollection classpath = test.getClasspath();
+    override val taskClass
+    get() = Test::class.java
 
-            classpathHolder[0] = classpath;
+    override fun configureTask(test: Test, jigsawPlugin: JigsawPlugin) {
+        jigsawPlugin.setModuleNamesInputProperty(test)
 
-            final Set<File> classpathFileSet = classpath.getFiles();
+        val classpath by lazy {test.classpath}
+
+        doAfterAllOtherDoFirstActions(test, Action {
+            val classpathFileSet = classpath.files
 
             //HACK:
             // Test#classpath is used by the @TaskAction of Test to set the classpath, which is used to:
@@ -98,55 +78,51 @@ public class TestTaskConfigurer implements TaskConfigurer<Test> {
             //
             // Therefore, the hack sets #testClasses & #testClasspath correctly, then calls #processTestClass(RelativeFile) on a RelativeFile for this class,
             // since it doesn't contain any tests.
-            final TestFrameworkDetector detector = test.getTestFramework().getDetector();
-
-            if (detector != null) {
+            test.testFramework.detector?.let {detector ->
                 try {
                     // copy class file for this class to be used in the hack as described above
-                    final String classSimpleName = TestTaskConfigurer.class.getSimpleName();
+                    val classSimpleName = TestTaskConfigurer::class.java.simpleName
 
-                    final File extractedClassFile = createTempFile(classSimpleName, ".class", test.getTemporaryDir());
-                    extractedClassFile.deleteOnExit();
+                    val extractedClassFile = createTempFile(classSimpleName, ".class", test.temporaryDir)
+                    extractedClassFile.deleteOnExit()
 
-                    try (InputStream extractedClassIs = TestTaskConfigurer.class.getResourceAsStream(classSimpleName + ".class")) {
-                        copy(extractedClassIs, extractedClassFile.toPath(), REPLACE_EXISTING);
+                    TestTaskConfigurer::class.java.getResourceAsStream(classSimpleName + ".class").use {extractedClassIs ->
+                        copy(extractedClassIs, extractedClassFile.toPath(), REPLACE_EXISTING)
                     }
 
                     // setup #testClasses & #testClasspath of detector to find tests, then find tests
-                    detector.setTestClasses(test.getTestClassesDirs().getFiles());
-                    detector.setTestClasspath(classpathFileSet);
-                    detector.processTestClass(new RelativeFile(extractedClassFile, RelativePath.parse(true, extractedClassFile.getPath())));
+                    detector.setTestClasses(test.testClassesDirs.files)
+                    detector.setTestClasspath(classpathFileSet)
+                    detector.processTestClass(RelativeFile(extractedClassFile, RelativePath.parse(true, extractedClassFile.path)))
                 }
-                catch (final IOException ex) {
-                    throw new GradleException("Could not write non-test class file to setup test-superclass-search classpath", ex);
+                catch (ex: IOException) {
+                    throw GradleException("Could not write non-test class file to setup test-superclass-search classpath", ex)
                 }
             }
 
-            final Project project = test.getProject();
+            val args = mutableListOf<String>()
 
-            final List<String> args = new ArrayList<>();
+            val moduleNameIsset = jigsawPlugin.moduleNameIsset
 
-            final ImmutableSortedSet<String> moduleNameIsset = jigsawPlugin.getModuleNameIsset();
+            addModuleArguments(args, moduleNameIsset, classpathFileSet)
 
-            addModuleArguments(args, moduleNameIsset, classpathFileSet);
+            args += OPTION_ADD_MODULES
+            args += ALL_MODULE_PATH
 
-            args.add(OPTION_ADD_MODULES);
-            args.add(ALL_MODULE_PATH);
+            val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
 
-            final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
-
-            if (! testModuleNameCommaDelimitedString.isEmpty()) {
-                moduleNameIsset.forEach(moduleName -> {
-                    args.add(OPTION_ADD_READS);
-                    args.add(moduleName + '=' + testModuleNameCommaDelimitedString);
-                });
+            if (testModuleNameCommaDelimitedString.isNotEmpty()) {
+                moduleNameIsset.forEach {moduleName ->
+                    args += OPTION_ADD_READS
+                    args += moduleName + '=' + testModuleNameCommaDelimitedString
+                }
             }
 
-            test.jvmArgs(args);
+            test.jvmArgs(args)
 
-            test.setClasspath(project.files());
-        });
+            test.classpath = test.project.files()
+        })
 
-        doBeforeAllOtherDoLastActions(test, task -> test.setClasspath(classpathHolder[0]));
+        doBeforeAllOtherDoLastActions(test, Action {test.classpath = classpath})
     }
 }

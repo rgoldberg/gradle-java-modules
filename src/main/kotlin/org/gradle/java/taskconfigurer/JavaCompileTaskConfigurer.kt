@@ -13,227 +13,202 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.taskconfigurer;
-
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.UnmodifiableIterator;
-import org.gradle.api.Project;
-import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.tasks.compile.JavaCompile;
-import org.gradle.api.tasks.testing.Test;
-import org.gradle.java.JigsawPlugin;
-
-import java.io.File;
-import java.nio.file.Path;
-import java.util.List;
-
-import static com.google.common.base.Strings.commonPrefix;
-import static com.google.common.base.Strings.commonSuffix;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.collect.Streams.stream;
-import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
-import static org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions;
-import static org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions;
-import static org.gradle.java.GradleUtils.getSourceSet;
-import static org.gradle.java.GradleUtils.getSourceSetName;
-import static org.gradle.java.jdk.JavaCommonTool.addModuleArguments;
-import static org.gradle.java.jdk.Javac.OPTION_ADD_MODULES;
-import static org.gradle.java.jdk.Javac.OPTION_ADD_READS;
-import static org.gradle.java.jdk.Javac.OPTION_MODULE_SOURCE_PATH;
-import static org.gradle.java.testing.StandardTestFrameworkModuleInfo.getTestModuleNameCommaDelimitedString;
-
-import static java.util.stream.Collectors.joining;
-
-public class JavaCompileTaskConfigurer implements TaskConfigurer<JavaCompile> {
-
-    public JavaCompileTaskConfigurer() {}
+package org.gradle.java.taskconfigurer
 
 
-    @Override
-    public Class<JavaCompile> getTaskClass() {
-        return JavaCompile.class;
-    }
+import com.google.common.collect.ImmutableCollection
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.ImmutableSet.toImmutableSet
+import com.google.common.collect.Streams.stream
+import java.io.File
+import java.util.stream.Collectors.joining
+import org.gradle.api.Action
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.FileCollection
+import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.testing.Test
+import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
+import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
+import org.gradle.java.GradleUtils.getSourceSet
+import org.gradle.java.GradleUtils.getSourceSetName
+import org.gradle.java.JigsawPlugin
+import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_MODULES
+import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_READS
+import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
+import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_MODULE_SOURCE_PATH
+import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
 
-    @Override
-    public void configureTask(final JavaCompile javaCompile, final JigsawPlugin jigsawPlugin) {
-        final String sourceSetName = getSourceSetName(javaCompile);
 
-        final ImmutableMap<Path, String> moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName);
+class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
+
+    override val taskClass
+    get() = JavaCompile::class.java
+
+
+    override fun configureTask(javaCompile: JavaCompile, jigsawPlugin: JigsawPlugin) {
+        val sourceSetName = getSourceSetName(javaCompile)
+
+        val moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName)
 
         if (moduleNameIbyModuleInfoJavaPath.isEmpty()) {
             //TODO: use better heuristic to determine if javaCompile is for test code
-            if (TEST_SOURCE_SET_NAME.equals(sourceSetName)) {
+            if (TEST_SOURCE_SET_NAME == sourceSetName) {
                 // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
-                jigsawPlugin.setModuleNamesInputProperty(javaCompile);
 
-                final FileCollection[] classpathHolder = new FileCollection[1];
+                jigsawPlugin.setModuleNamesInputProperty(javaCompile)
 
-                doAfterAllOtherDoFirstActions(javaCompile, task -> {
-                    final FileCollection classpath = javaCompile.getClasspath();
+                val classpath by lazy {javaCompile.classpath}
 
-                    classpathHolder[0] = classpath;
+                doAfterAllOtherDoFirstActions(javaCompile, Action {
+                    val project = javaCompile.project
 
-                    final Project project = javaCompile.getProject();
+                    val moduleNameIsset = jigsawPlugin.moduleNameIsset
 
-                    final ImmutableSortedSet<String> moduleNameIsset = jigsawPlugin.getModuleNameIsset();
-
-                    final List<String> args =
+                    val args =
                         configureTask(
                             javaCompile,
                             moduleNameIsset,
-                            classpath.plus(getSourceSet(project, TEST_SOURCE_SET_NAME).getAllJava().getSourceDirectories())
+                            classpath + getSourceSet(project, TEST_SOURCE_SET_NAME).allJava.sourceDirectories
                         )
-                    ;
 
-                    project.getTasks().withType(Test.class).configureEach(test -> {
-                        final String testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test);
+                    project.tasks.withType(Test::class.java).configureEach {test ->
+                        val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
 
-                        if (! testModuleNameCommaDelimitedString.isEmpty()) {
-                            args.add(OPTION_ADD_MODULES);
-                            args.add(testModuleNameCommaDelimitedString);
+                        if (testModuleNameCommaDelimitedString.isNotEmpty()) {
+                            args += OPTION_ADD_MODULES
+                            args += testModuleNameCommaDelimitedString
 
-                            moduleNameIsset.forEach(moduleName -> {
-                                args.add(OPTION_ADD_READS);
-                                args.add(moduleName + '=' + testModuleNameCommaDelimitedString);
-                            });
+                            moduleNameIsset.forEach {moduleName ->
+                                args += OPTION_ADD_READS
+                                args += moduleName + '=' + testModuleNameCommaDelimitedString
+                            }
                         }
-                    });
-                });
+                    }
+                })
 
-                doBeforeAllOtherDoLastActions(javaCompile, task -> javaCompile.setClasspath(classpathHolder[0]));
+                doBeforeAllOtherDoLastActions(javaCompile, Action {javaCompile.classpath = classpath})
             }
         }
         else {
             // source set contains at least one module-info.java
-            final FileCollection[] classpathHolder = new FileCollection[1];
+            val classpath by lazy {javaCompile.classpath}
 
-            doAfterAllOtherDoFirstActions(javaCompile, task -> {
-                final FileCollection classpath = javaCompile.getClasspath();
+            doAfterAllOtherDoFirstActions(javaCompile, Action {
+                val moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values
 
-                classpathHolder[0] = classpath;
-
-                final ImmutableCollection<String> moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values();
-
-                if (moduleNameIbyModuleInfoJavaPath.size() > 1) {
+                if (moduleNameIbyModuleInfoJavaPath.size > 1) {
                     // generate --module-source-path
 
                     //TODO: determine the packages for each module, and include root dir for all sources in that package
 
-                    final List<String> args = javaCompile.getOptions().getCompilerArgs();
+                    val args = javaCompile.options.compilerArgs
 
-                    args.add(OPTION_MODULE_SOURCE_PATH);
-                    args.add(
+                    args += OPTION_MODULE_SOURCE_PATH
+                    args +=
                         getModuleSourcePath(
-                            moduleNameIbyModuleInfoJavaPath.entrySet().stream()
-                            .map(moduleNameIforModuleInfoJavaPath -> {
-                                final Path   moduleInfoJavaPath          = moduleNameIforModuleInfoJavaPath.getKey();
-                                final String moduleName                  = moduleNameIforModuleInfoJavaPath.getValue();
-                                final String separator                   = moduleInfoJavaPath.getFileSystem().getSeparator();
-                                final String moduleInfoJavaDirPathString = moduleInfoJavaPath.getParent().toString();
+                            moduleNameIbyModuleInfoJavaPath.entries.stream()
+                            .map {moduleNameIforModuleInfoJavaPath ->
+                                val moduleInfoJavaPath          = moduleNameIforModuleInfoJavaPath.key
+                                val moduleName                  = moduleNameIforModuleInfoJavaPath.value
+                                val separator                   = moduleInfoJavaPath.fileSystem.separator
+                                val moduleInfoJavaDirPathString = moduleInfoJavaPath.parent.toString()
 
-                                final int i = moduleInfoJavaDirPathString.lastIndexOf(separator + moduleName + separator);
+                                val i = moduleInfoJavaDirPathString.lastIndexOf(separator + moduleName + separator)
 
-                                return
-                                    i == -1
-                                        ? moduleInfoJavaDirPathString.endsWith(separator + moduleName)
-                                            ? moduleInfoJavaDirPathString.substring(
-                                                0,
-                                                moduleInfoJavaDirPathString.length() - separator.length() - moduleName.length()
-                                            )
-                                            : moduleInfoJavaDirPathString
-                                        : new StringBuilder(moduleInfoJavaDirPathString.length() - moduleName.length() + 1)
-                                        .append(moduleInfoJavaDirPathString, 0, i + separator.length())
-                                        .append('*')
-                                        .append(
-                                            moduleInfoJavaDirPathString,
-                                            i + separator.length() + moduleName.length(),
-                                            moduleInfoJavaDirPathString.length()
-                                        )
-                                        .toString()
-                                ;
-                            })
+                                if (i == -1)
+                                    if (moduleInfoJavaDirPathString.endsWith(separator + moduleName))
+                                        moduleInfoJavaDirPathString.substring(0, moduleInfoJavaDirPathString.length - separator.length - moduleName.length)
+                                    else
+                                        moduleInfoJavaDirPathString
+                                else
+                                    StringBuilder(moduleInfoJavaDirPathString.length - moduleName.length + 1)
+                                    .append(moduleInfoJavaDirPathString, 0, i + separator.length)
+                                    .append('*')
+                                    .append(
+                                        moduleInfoJavaDirPathString,
+                                        i + separator.length + moduleName.length,
+                                        moduleInfoJavaDirPathString.length
+                                    )
+                                    .toString()
+                            }
                             .collect(toImmutableSet())
                         )
-                    );
 
                     // must change the classes output directories for the SourceSet:
                     // for each existing output directory, d, replace with subdirectories of d, one for each compile module name
 
                     //TODO: only works if SourceSet#output#classesDirs is a ConfigurableFileCollection
-                    final ConfigurableFileCollection outputClassesDirs = (ConfigurableFileCollection) getSourceSet(javaCompile).getOutput().getClassesDirs();
+                    val outputClassesDirs = getSourceSet(javaCompile).output.classesDirs as ConfigurableFileCollection
 
                     //TODO: ensure it is OK to change SourceSet#output#classesDirs during execution phase
                     outputClassesDirs.setFrom(
-                        stream(outputClassesDirs)
-                        .flatMap(dirFile -> moduleNameIcoll.stream().map(moduleName -> new File(dirFile, moduleName)))
+                        *stream(outputClassesDirs)
+                        .flatMap {dirFile -> moduleNameIcoll.stream().map {moduleName -> File(dirFile, moduleName)}}
                         .toArray()
-                    );
+                    )
                 }
 
-                configureTask(javaCompile, moduleNameIcoll, classpath);
-            });
+                configureTask(javaCompile, moduleNameIcoll, classpath)
+            })
 
-            doBeforeAllOtherDoLastActions(javaCompile, task -> javaCompile.setClasspath(classpathHolder[0]));
+            doBeforeAllOtherDoLastActions(javaCompile, Action {javaCompile.classpath = classpath})
         }
     }
 
-    private List<String> configureTask(final JavaCompile javaCompile, final ImmutableCollection<String> moduleNameIcoll, final FileCollection classpath) {
-        final List<String> args = javaCompile.getOptions().getCompilerArgs();
+    private fun configureTask(javaCompile: JavaCompile, moduleNameIcoll: ImmutableCollection<String>, classpath: FileCollection): MutableList<String> {
+        val args = javaCompile.options.compilerArgs
 
-        addModuleArguments(args, moduleNameIcoll, classpath.getFiles());
+        addModuleArguments(args, moduleNameIcoll, classpath.files)
 
-        javaCompile.setClasspath(javaCompile.getProject().files());
+        javaCompile.classpath = javaCompile.project.files()
 
-        return args;
+        return args
     }
 
-    private String getModuleSourcePath(final ImmutableSet<String> moduleSourceIset) {
-        if (moduleSourceIset.size() == 1) {
-            return moduleSourceIset.iterator().next();
+    private fun getModuleSourcePath(moduleSourceIset: ImmutableSet<String>): String {
+        if (moduleSourceIset.size == 1) {
+            return moduleSourceIset.iterator().next()
         }
 
-        final UnmodifiableIterator<String> moduleSourceCommonUitr = moduleSourceIset.iterator();
+        val moduleSourceCommonUitr = moduleSourceIset.iterator()
 
-        String commonPrefix = moduleSourceCommonUitr.next();
-        String commonSuffix = commonPrefix;
+        var commonPrefix = moduleSourceCommonUitr.next()
+        var commonSuffix = commonPrefix
 
         while (moduleSourceCommonUitr.hasNext()) {
-            final String currModuleSource = moduleSourceCommonUitr.next();
-            commonPrefix = commonPrefix(commonPrefix, currModuleSource);
-            commonSuffix = commonSuffix(commonSuffix, currModuleSource);
+            val currModuleSource = moduleSourceCommonUitr.next()
+            commonPrefix = commonPrefix.commonPrefixWith(currModuleSource)
+            commonSuffix = commonSuffix.commonSuffixWith(currModuleSource)
         }
 
         if (commonPrefix.isEmpty() && commonSuffix.isEmpty()) {
-            return moduleSourceIset.stream().collect(joining(",", "{", "}"));
+            return moduleSourceIset.stream().collect(joining(",", "{", "}"))
         }
 
-        final int commonPrefixLength = commonPrefix.length();
-        final int commonSuffixLength = commonSuffix.length();
+        val commonPrefixLength = commonPrefix.length
+        val commonSuffixLength = commonSuffix.length
 
-        final StringBuilder sb = new StringBuilder();
-        sb.append(commonPrefix);
-        sb.append('{');
+        val sb = StringBuilder()
+        sb.append(commonPrefix)
+        sb.append('{')
 
-        final UnmodifiableIterator<String> moduleSourceAlternateUitr = moduleSourceIset.iterator();
+        val moduleSourceAlternateUitr = moduleSourceIset.iterator()
 
-        appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb);
+        appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb)
 
         while (moduleSourceAlternateUitr.hasNext()) {
-            sb.append(',');
-            appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb);
+            sb.append(',')
+            appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb)
         }
 
-        sb.append('}');
-        sb.append(commonSuffix);
+        sb.append('}')
+        sb.append(commonSuffix)
 
-        return sb.toString();
+        return sb.toString()
     }
 
-    private void appendModuleSourceAlternate(final String moduleSource, final int commonPrefixLength, final int commonSuffixLength, final StringBuilder sb) {
-        sb.append(moduleSource, commonPrefixLength, moduleSource.length() - commonSuffixLength);
+    private fun appendModuleSourceAlternate(moduleSource: String, commonPrefixLength: Int, commonSuffixLength: Int, sb: StringBuilder) {
+        sb.append(moduleSource, commonPrefixLength, moduleSource.length - commonSuffixLength)
     }
 }

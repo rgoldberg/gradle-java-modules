@@ -13,19 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.jdk;
+package org.gradle.java.jdk
 
-public interface JavaSourceTool extends JavaCommonTool {
 
-    String OPTION_RELEASE = "--release";
-    String OPTION_SOURCE  = "-source";
+interface JavaSourceTool: JavaCommonTool {
 
-    // module options
-    String OPTION_MODULE_SOURCE_PATH = "--module-source-path";
-    String OPTION_SYSTEM             = "--system";
+    companion object {
+        const val OPTION_RELEASE = "--release"
+        const val OPTION_SOURCE  = "-source"
 
-    // OPTION_SYSTEM values
-    String NONE = "none";
+        // module options
+        const val OPTION_MODULE_SOURCE_PATH = "--module-source-path"
+        const val OPTION_SYSTEM             = "--system"
 
-    String FILE_NAME_MODULE_INFO_JAVA = "module-info.java";
+        // OPTION_SYSTEM values
+        const val NONE = "none"
+
+        const val FILE_NAME_MODULE_INFO_JAVA = "module-info.java"
+    }
 }
