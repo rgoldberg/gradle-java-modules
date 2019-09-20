@@ -13,9 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.testing;
+package org.gradle.java.taskconfigurer
 
-public interface TestFrameworkModuleInfo {
 
-    String getTestModuleNameCommaDelimitedString();
+import org.gradle.api.Task
+import org.gradle.java.JigsawPlugin
+
+
+interface TaskConfigurer<T: Task> {
+
+    val taskClass: Class<T>
+
+    fun configureTask(task: T, jigsawPlugin: JigsawPlugin)
 }

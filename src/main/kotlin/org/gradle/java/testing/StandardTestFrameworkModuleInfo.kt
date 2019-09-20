@@ -15,11 +15,9 @@
  */
 package org.gradle.java.testing;
 
-import com.google.common.collect.ImmutableMap;
 import org.gradle.api.internal.tasks.testing.junit.JUnitTestFramework;
 import org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestFramework;
 import org.gradle.api.internal.tasks.testing.testng.TestNGTestFramework;
-import org.gradle.api.tasks.testing.Test;
 
 import static com.google.common.collect.Maps.uniqueIndex;
 
