@@ -22,6 +22,7 @@ import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.application.CreateStartScripts
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.CreateStartScriptsOptionsInternal
 import org.gradle.java.jdk.JAVA
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
@@ -33,6 +34,9 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
 
     override val taskClass
     get() = CreateStartScripts::class.java
+
+    override val optionsInternalClass
+    get() = CreateStartScriptsOptionsInternal::class.java
 
     override fun configureTask(createStartScripts: CreateStartScripts, jigsawPlugin: JigsawPlugin) {
         val main = createStartScripts.mainClassName

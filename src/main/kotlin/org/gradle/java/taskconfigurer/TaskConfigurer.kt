@@ -16,13 +16,35 @@
 package org.gradle.java.taskconfigurer
 
 
+import org.gradle.api.Action
 import org.gradle.api.Task
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.OptionsInternal
+import org.gradle.java.extension.TASK_OPTIONS_EXTENSION_NAME
+import org.gradle.java.extension.ToolOptionDefaults
+import org.gradle.java.util.doAfterAllOtherDoFirstActions
+import org.gradle.java.util.doBeforeAllOtherDoLastActions
 
 
 interface TaskConfigurer<T: Task> {
 
     val taskClass: Class<T>
 
-    fun configureTask(task: T, jigsawPlugin: JigsawPlugin)
+    val optionsInternalClass: Class<out OptionsInternal>
+
+    fun configureExtensions(task: T, jigsawPlugin: JigsawPlugin) {
+        with(task.project.extensions.getByType(ToolOptionDefaults::class.java)) {
+            task.extensions.create(TASK_OPTIONS_EXTENSION_NAME, optionsInternalClass, this, this, task)
+        }
+    }
+
+    fun configureTask(task: T, jigsawPlugin: JigsawPlugin) {
+        task.doAfterAllOtherDoFirstActions(Action {
+            task.extensions.configure<OptionsInternal>(TASK_OPTIONS_EXTENSION_NAME) {it.configure()}
+        })
+
+        task.doBeforeAllOtherDoLastActions(Action {
+            task.extensions.configure<OptionsInternal>(TASK_OPTIONS_EXTENSION_NAME) {it.reset()}
+        })
+    }
 }

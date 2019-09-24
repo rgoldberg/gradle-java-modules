@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.testing
+package org.gradle.java.extension
 
 
-import org.gradle.api.Task
+interface Option
 
+interface Flagged {
 
-val Task.isTestInput: Boolean
-get() {
-    val testClasses = project.tasks.getByName("testClasses")
-
-    return testClasses.taskDependencies.getDependencies(testClasses).contains(this)
+    val flag: String
 }
+
+interface OptionInternal: Option, Flagged

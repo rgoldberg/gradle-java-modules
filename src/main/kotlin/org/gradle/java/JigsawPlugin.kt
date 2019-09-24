@@ -54,6 +54,7 @@ import org.gradle.api.Task
 import org.gradle.api.logging.Logging.getLogger
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.java.extension.ToolOptionDefaults
 import org.gradle.java.jdk.JAVAC
 import org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer
 import org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer
@@ -108,7 +109,11 @@ class JigsawPlugin: Plugin<Project> {
         }
     }
 
-    fun register(taskConfigurer: TaskConfigurer<out Task>) {
+    fun <T: Task> register(taskConfigurer: TaskConfigurer<T>) {
+        project.tasks.withType(taskConfigurer.taskClass).configureEach {
+            taskConfigurer.configureExtensions(it, this)
+        }
+
         taskConfigurerSet += taskConfigurer
     }
     //</editor-fold>
@@ -121,6 +126,8 @@ class JigsawPlugin: Plugin<Project> {
         this.project = project
 
         project.plugins.apply(JavaPlugin::class.java)
+
+        project.extensions.create(TOOL_OPTION_DEFAULTS_EXTENSION_NAME, ToolOptionDefaults::class.java)
 
         register(CreateStartScriptsTaskConfigurer())
         register(JavaCompileTaskConfigurer())
@@ -299,5 +306,7 @@ class JigsawPlugin: Plugin<Project> {
 
     companion object {
         private val LOGGER = getLogger(JigsawPlugin::class.java)
+
+        const val TOOL_OPTION_DEFAULTS_EXTENSION_NAME = "toolOptionDefaults"
     }
 }

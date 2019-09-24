@@ -29,6 +29,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.JavaCompileOptionsInternal
 import org.gradle.java.jdk.JAVAC
 import org.gradle.java.testing.isTestInput
 import org.gradle.java.testing.moduleNameCommaDelimitedString
@@ -45,6 +46,8 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
     override val taskClass
     get() = JavaCompile::class.java
 
+    override val optionsInternalClass
+    get() = JavaCompileOptionsInternal::class.java
 
     override fun configureTask(javaCompile: JavaCompile, jigsawPlugin: JigsawPlugin) {
         val sourceSetName = javaCompile.getCompileSourceSetName(TARGET)

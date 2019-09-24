@@ -25,6 +25,7 @@ import org.gradle.api.file.RelativePath
 import org.gradle.api.internal.file.RelativeFile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.TestOptionsInternal
 import org.gradle.java.jdk.JAVA
 import org.gradle.java.testing.moduleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
@@ -35,6 +36,9 @@ class TestTaskConfigurer: TaskConfigurer<Test> {
 
     override val taskClass
     get() = Test::class.java
+
+    override val optionsInternalClass
+    get() = TestOptionsInternal::class.java
 
     override fun configureTask(test: Test, jigsawPlugin: JigsawPlugin) {
         val classpath by lazy {test.classpath}

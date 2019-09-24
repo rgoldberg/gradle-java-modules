@@ -20,6 +20,7 @@ import org.gradle.api.Action
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.CoreJavadocOptions
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.JavadocOptionsInternal
 import org.gradle.java.jdk.JAVADOC
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
@@ -29,6 +30,9 @@ class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
 
     override val taskClass
     get() = Javadoc::class.java
+
+    override val optionsInternalClass
+    get() = JavadocOptionsInternal::class.java
 
     override fun configureTask(javadoc: Javadoc, jigsawPlugin: JigsawPlugin) {
         val classpath by lazy {javadoc.classpath}

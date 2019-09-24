@@ -21,6 +21,9 @@ import org.gradle.api.Action
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.KotlinCompileOptionsInternal
+import org.gradle.java.extension.TASK_OPTIONS_EXTENSION_NAME
+import org.gradle.java.extension.ToolOptionDefaults
 import org.gradle.java.testing.isTestInput
 import org.gradle.java.testing.moduleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
@@ -37,6 +40,20 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
     override val taskClass
     get() = KotlinCompile::class.java
+
+    override val optionsInternalClass
+    get() = KotlinCompileOptionsInternal::class.java
+
+    override fun configureExtensions(task: KotlinCompile, jigsawPlugin: JigsawPlugin) {
+        with(task.project.extensions.getByType(ToolOptionDefaults::class.java)) {
+            task.extensions.create(
+                TASK_OPTIONS_EXTENSION_NAME,
+                optionsInternalClass,
+                this,
+                task
+            )
+        }
+    }
 
     override fun configureTask(kotlinCompile: KotlinCompile, jigsawPlugin: JigsawPlugin) {
         val sourceSetName = kotlinCompile.getCompileSourceSetName(TARGET)

@@ -20,6 +20,7 @@ import kotlinx.collections.immutable.persistentSetOf
 import org.gradle.api.Action
 import org.gradle.api.tasks.JavaExec
 import org.gradle.java.JigsawPlugin
+import org.gradle.java.extension.JavaExecOptionsInternal
 import org.gradle.java.jdk.JAVA
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
@@ -29,6 +30,9 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
 
     override val taskClass
     get() = JavaExec::class.java
+
+    override val optionsInternalClass
+    get() = JavaExecOptionsInternal::class.java
 
     override fun configureTask(javaExec: JavaExec, jigsawPlugin: JigsawPlugin) {
         val main = javaExec.main

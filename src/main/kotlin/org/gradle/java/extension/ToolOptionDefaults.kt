@@ -13,15 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java.testing
+package org.gradle.java.extension
 
 
-import org.gradle.api.Task
-
-
-val Task.isTestInput: Boolean
-get() {
-    val testClasses = project.tasks.getByName("testClasses")
-
-    return testClasses.taskDependencies.getDependencies(testClasses).contains(this)
-}
+open class ToolOptionDefaults:
+AutoGeneratable by DefaultAutoGeneratable(),
+SeparableValue  by DefaultSeparableValue()
