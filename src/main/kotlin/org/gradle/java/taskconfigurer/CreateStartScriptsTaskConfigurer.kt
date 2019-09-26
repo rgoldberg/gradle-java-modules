@@ -21,12 +21,12 @@ import java.io.IOException
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.application.CreateStartScripts
-import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
-import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
-import org.gradle.java.GradleUtils.setModuleNamesInputProperty
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE_PATH
+import org.gradle.java.util.doAfterAllOtherDoFirstActions
+import org.gradle.java.util.doBeforeAllOtherDoLastActions
+import org.gradle.java.util.setModuleNamesInputProperty
 import org.gradle.util.TextUtil.getUnixLineSeparator
 import org.gradle.util.TextUtil.getWindowsLineSeparator
 

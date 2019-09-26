@@ -19,12 +19,12 @@ package org.gradle.java.taskconfigurer
 import com.google.common.collect.ImmutableSet
 import org.gradle.api.Action
 import org.gradle.api.tasks.JavaExec
-import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
-import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
-import org.gradle.java.GradleUtils.setModuleNamesInputProperty
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE
 import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
+import org.gradle.java.util.doAfterAllOtherDoFirstActions
+import org.gradle.java.util.doBeforeAllOtherDoLastActions
+import org.gradle.java.util.setModuleNamesInputProperty
 
 
 class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {

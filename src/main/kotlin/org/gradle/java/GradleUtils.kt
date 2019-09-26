@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.java
+package org.gradle.java.util
 
 
 import org.gradle.api.Action
@@ -25,117 +25,104 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.kotlin.dsl.the
 
 
-object GradleUtils {
+private class DoFirstAction<T> internal constructor(private val delegate: Action<in T>): Action<T>, Describable {
 
-    private class DoFirstAction<T> internal constructor(private val delegate: Action<in T>): Action<T>, Describable {
+    override fun execute(t: T) =
+        delegate.execute(t)
 
-        override fun execute(t: T) =
-            delegate.execute(t)
-
-        override fun getDisplayName() =
-            DO_FIRST_ACTION_DISPLAY_NAME
-    }
-
-
-    private const val PROPERTY_NAME_MODULE_NAMES = "moduleNames"
-
-    private const val VERB_COMPILE = "compile"
-
-    private const val DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action"
-
-
-    //<editor-fold desc="Task helper methods">
-    @JvmStatic
-    fun Task.doAfterAllOtherDoFirstActions(action: Action<in Task>) {
-        val actionList = actions
-
-        val actionLitr = actionList.listIterator(actionList.size)
-        while (actionLitr.hasPrevious()) {
-            val existingAction = actionLitr.previous()
-
-            if (
-                existingAction is Describable &&
-                DO_FIRST_ACTION_DISPLAY_NAME == (existingAction as Describable).displayName
-            ) {
-                actionList.add(actionLitr.nextIndex() + 1, DoFirstAction(action))
-                return
-            }
-        }
-
-        doFirst(action)
-    }
-
-    @JvmStatic
-    fun Task.doBeforeAllOtherDoLastActions(action: Action<in Task>) {
-        val actionList = actions
-
-        val actionLitr = actionList.listIterator()
-        while (actionLitr.hasNext()) {
-            val existingAction = actionLitr.next()
-
-            if (
-                existingAction is Describable &&
-                "Execute doLast {} action" == (existingAction as Describable).displayName
-            ) {
-                actionList.add(actionLitr.previousIndex(), action)
-                return
-            }
-        }
-
-        doLast(action)
-    }
-    //</editor-fold>
-
-
-    //<editor-fold desc="SourceSet helper methods">
-    @JvmStatic
-    val Project.sourceSets
-    get() = the<SourceSetContainer>()
-
-    @JvmStatic
-    fun Task.getCompileSourceSet(target: String) =
-        getSourceSet(VERB_COMPILE, target)
-
-    @JvmStatic
-    fun Task.getSourceSet(verb: String, target: String) =
-        project.getSourceSet(name, verb, target)
-
-    @JvmStatic
-    fun Project.getSourceSet(taskName: String, verb: String, target: String) =
-        sourceSets.getByName(getSourceSetName(taskName, verb, target))
-
-
-    @JvmStatic
-    fun Task.getCompileSourceSetName(target: String) =
-        getSourceSetName(VERB_COMPILE, target)
-
-    @JvmStatic
-    fun Task.getSourceSetName(verb: String, target: String) =
-        getSourceSetName(name, verb, target)
-
-    @JvmStatic
-    fun getSourceSetName(taskName: String, verb: String, target: String): String {
-        val taskNameLength   = taskName.length
-        val verbLength       = verb.length
-        val targetLength     = target.length
-        val verbTargetLength = verbLength + targetLength
-
-        return if (taskNameLength == verbTargetLength) {
-            MAIN_SOURCE_SET_NAME
-        }
-        else {
-            val sb = StringBuilder(taskNameLength - verbTargetLength)
-            sb.append(taskName[verbLength].toLowerCase())
-            sb.append(taskName, verbLength + 1, taskNameLength - targetLength)
-            sb.toString()
-        }
-    }
-    //</editor-fold>
-
-
-    //<editor-fold desc="moduleNames input property helper methods">
-    @JvmStatic
-    fun Task.setModuleNamesInputProperty(moduleNamesCommaDelimited: String) =
-        inputs.property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited)
-    //</editor-fold>
+    override fun getDisplayName() =
+        DO_FIRST_ACTION_DISPLAY_NAME
 }
+
+
+private const val PROPERTY_NAME_MODULE_NAMES = "moduleNames"
+
+private const val VERB_COMPILE = "compile"
+
+private const val DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action"
+
+
+//<editor-fold desc="Task helper methods">
+fun Task.doAfterAllOtherDoFirstActions(action: Action<in Task>) {
+    val actionList = actions
+
+    val actionLitr = actionList.listIterator(actionList.size)
+    while (actionLitr.hasPrevious()) {
+        val existingAction = actionLitr.previous()
+
+        if (
+            existingAction is Describable &&
+            DO_FIRST_ACTION_DISPLAY_NAME == (existingAction as Describable).displayName
+        ) {
+            actionList.add(actionLitr.nextIndex() + 1, DoFirstAction(action))
+            return
+        }
+    }
+
+    doFirst(action)
+}
+
+fun Task.doBeforeAllOtherDoLastActions(action: Action<in Task>) {
+    val actionList = actions
+
+    val actionLitr = actionList.listIterator()
+    while (actionLitr.hasNext()) {
+        val existingAction = actionLitr.next()
+
+        if (
+            existingAction is Describable &&
+            "Execute doLast {} action" == (existingAction as Describable).displayName
+        ) {
+            actionList.add(actionLitr.previousIndex(), action)
+            return
+        }
+    }
+
+    doLast(action)
+}
+//</editor-fold>
+
+
+//<editor-fold desc="SourceSet helper methods">
+val Project.sourceSets
+get() = the<SourceSetContainer>()
+
+fun Task.getCompileSourceSet(target: String) =
+    getSourceSet(VERB_COMPILE, target)
+
+fun Task.getSourceSet(verb: String, target: String) =
+    project.getSourceSet(name, verb, target)
+
+fun Project.getSourceSet(taskName: String, verb: String, target: String) =
+    sourceSets.getByName(getSourceSetName(taskName, verb, target))
+
+
+fun Task.getCompileSourceSetName(target: String) =
+    getSourceSetName(VERB_COMPILE, target)
+
+fun Task.getSourceSetName(verb: String, target: String) =
+    getSourceSetName(name, verb, target)
+
+fun getSourceSetName(taskName: String, verb: String, target: String): String {
+    val taskNameLength   = taskName.length
+    val verbLength       = verb.length
+    val targetLength     = target.length
+    val verbTargetLength = verbLength + targetLength
+
+    return if (taskNameLength == verbTargetLength) {
+        MAIN_SOURCE_SET_NAME
+    }
+    else {
+        val sb = StringBuilder(taskNameLength - verbTargetLength)
+        sb.append(taskName[verbLength].toLowerCase())
+        sb.append(taskName, verbLength + 1, taskNameLength - targetLength)
+        sb.toString()
+    }
+}
+//</editor-fold>
+
+
+//<editor-fold desc="moduleNames input property helper methods">
+fun Task.setModuleNamesInputProperty(moduleNamesCommaDelimited: String) =
+    inputs.property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited)
+//</editor-fold>

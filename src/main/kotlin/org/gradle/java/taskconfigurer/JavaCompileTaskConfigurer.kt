@@ -28,17 +28,17 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
-import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
-import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
-import org.gradle.java.GradleUtils.getCompileSourceSet
-import org.gradle.java.GradleUtils.getCompileSourceSetName
-import org.gradle.java.GradleUtils.sourceSets
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_MODULES
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_READS
 import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
 import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_MODULE_SOURCE_PATH
 import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
+import org.gradle.java.util.doAfterAllOtherDoFirstActions
+import org.gradle.java.util.doBeforeAllOtherDoLastActions
+import org.gradle.java.util.getCompileSourceSet
+import org.gradle.java.util.getCompileSourceSetName
+import org.gradle.java.util.sourceSets
 
 
 class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {

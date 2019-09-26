@@ -50,8 +50,6 @@ import org.gradle.api.Task
 import org.gradle.api.logging.Logging.getLogger
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.java.GradleUtils.setModuleNamesInputProperty
-import org.gradle.java.GradleUtils.sourceSets
 import org.gradle.java.jdk.JavaSourceTool.Companion.FILE_NAME_MODULE_INFO_JAVA
 import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_RELEASE
 import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_SOURCE
@@ -62,6 +60,8 @@ import org.gradle.java.taskconfigurer.JavadocTaskConfigurer
 import org.gradle.java.taskconfigurer.KotlinCompileTaskConfigurer
 import org.gradle.java.taskconfigurer.TaskConfigurer
 import org.gradle.java.taskconfigurer.TestTaskConfigurer
+import org.gradle.java.util.setModuleNamesInputProperty
+import org.gradle.java.util.sourceSets
 
 
 class JigsawPlugin: Plugin<Project> {

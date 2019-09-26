@@ -22,13 +22,13 @@ import org.gradle.api.Action
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import org.gradle.api.tasks.testing.Test
-import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
-import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
-import org.gradle.java.GradleUtils.getCompileSourceSetName
-import org.gradle.java.GradleUtils.sourceSets
 import org.gradle.java.JigsawPlugin
-import org.gradle.java.Modules.splitIntoModulePathAndPatchModule
 import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
+import org.gradle.java.util.doAfterAllOtherDoFirstActions
+import org.gradle.java.util.doBeforeAllOtherDoLastActions
+import org.gradle.java.util.getCompileSourceSetName
+import org.gradle.java.util.sourceSets
+import org.gradle.java.util.splitIntoModulePathAndPatchModule
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 

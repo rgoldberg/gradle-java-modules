@@ -19,10 +19,10 @@ package org.gradle.java.taskconfigurer
 import org.gradle.api.Action
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.CoreJavadocOptions
-import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
-import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE_PATH
+import org.gradle.java.util.doAfterAllOtherDoFirstActions
+import org.gradle.java.util.doBeforeAllOtherDoLastActions
 
 
 class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {

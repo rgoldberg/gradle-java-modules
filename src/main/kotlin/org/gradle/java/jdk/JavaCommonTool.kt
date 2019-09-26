@@ -19,7 +19,7 @@ package org.gradle.java.jdk
 import com.google.common.collect.ImmutableCollection
 import java.io.File
 import java.io.File.pathSeparator
-import org.gradle.java.Modules.splitIntoModulePathAndPatchModule
+import org.gradle.java.util.splitIntoModulePathAndPatchModule
 
 
 interface JavaCommonTool {
