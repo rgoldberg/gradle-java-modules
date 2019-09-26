@@ -27,7 +27,9 @@ import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.getCompileSourceSetName
 import org.gradle.java.util.sourceSets
+import org.gradle.kotlin.dsl.withConvention
 import org.gradle.kotlin.tool.KOTLINC
+import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
@@ -57,7 +59,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
                         configureTask(
                             kotlinCompile,
                             jigsawPlugin.moduleNameIset,
-                            classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).allSource.sourceDirectories //TODO? allSource
+                            classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).withConvention(KotlinSourceSet::class) {kotlin}.sourceDirectories
                         )
 
                     //TODO: ensure works
