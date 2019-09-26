@@ -35,7 +35,7 @@ class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
 
         val classpath by lazy {javadoc.classpath}
 
-        doAfterAllOtherDoFirstActions(javadoc, Action {
+        javadoc.doAfterAllOtherDoFirstActions(Action {
             if (! classpath.isEmpty) {
                 (javadoc.options as CoreJavadocOptions).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.asPath)
 
@@ -43,7 +43,7 @@ class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
             }
         })
 
-        doBeforeAllOtherDoLastActions(javadoc, Action {javadoc.classpath = classpath})
+        javadoc.doBeforeAllOtherDoLastActions(Action {javadoc.classpath = classpath})
     }
 
 

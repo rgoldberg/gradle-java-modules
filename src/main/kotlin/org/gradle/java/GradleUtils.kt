@@ -20,11 +20,9 @@ import org.gradle.api.Action
 import org.gradle.api.Describable
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.kotlin.dsl.the
 
 
 object GradleUtils {
@@ -43,15 +41,13 @@ object GradleUtils {
 
     private const val VERB_COMPILE = "compile"
 
-    private const val TARGET_JAVA = "Java"
-
     private const val DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action"
 
 
     //<editor-fold desc="Task helper methods">
     @JvmStatic
-    fun doAfterAllOtherDoFirstActions(task: Task, action: Action<in Task>) {
-        val actionList = task.actions
+    fun Task.doAfterAllOtherDoFirstActions(action: Action<in Task>) {
+        val actionList = actions
 
         val actionLitr = actionList.listIterator(actionList.size)
         while (actionLitr.hasPrevious()) {
@@ -66,12 +62,12 @@ object GradleUtils {
             }
         }
 
-        task.doFirst(action)
+        doFirst(action)
     }
 
     @JvmStatic
-    fun doBeforeAllOtherDoLastActions(task: Task, action: Action<in Task>) {
-        val actionList = task.actions
+    fun Task.doBeforeAllOtherDoLastActions(action: Action<in Task>) {
+        val actionList = actions
 
         val actionLitr = actionList.listIterator()
         while (actionLitr.hasNext()) {
@@ -86,48 +82,36 @@ object GradleUtils {
             }
         }
 
-        task.doLast(action)
+        doLast(action)
     }
     //</editor-fold>
 
 
     //<editor-fold desc="SourceSet helper methods">
     @JvmStatic
-    fun getSourceSets(project: Project) =
-        project.extensions.getByType(SourceSetContainer::class.java)
+    val Project.sourceSets
+    get() = the<SourceSetContainer>()
 
     @JvmStatic
-    fun getSourceSet(javaCompile: JavaCompile) =
-        getCompileSourceSet(javaCompile, TARGET_JAVA)
+    fun Task.getCompileSourceSet(target: String) =
+        getSourceSet(VERB_COMPILE, target)
 
     @JvmStatic
-    fun getCompileSourceSet(task: Task, target: String) =
-        getSourceSet(task, VERB_COMPILE, target)
+    fun Task.getSourceSet(verb: String, target: String) =
+        project.getSourceSet(name, verb, target)
 
     @JvmStatic
-    fun getSourceSet(task: Task, verb: String, target: String) =
-        getSourceSet(task.project, task.name, verb, target)
-
-    @JvmStatic
-    fun getSourceSet(project: Project, taskName: String, verb: String, target: String) =
-        getSourceSet(project, getSourceSetName(taskName, verb, target))
-
-    @JvmStatic
-    fun getSourceSet(project: Project, sourceSetName: String) =
-        getSourceSets(project).getByName(sourceSetName)
+    fun Project.getSourceSet(taskName: String, verb: String, target: String) =
+        sourceSets.getByName(getSourceSetName(taskName, verb, target))
 
 
     @JvmStatic
-    fun getSourceSetName(javaCompile: JavaCompile) =
-        getCompileSourceSetName(javaCompile, TARGET_JAVA)
+    fun Task.getCompileSourceSetName(target: String) =
+        getSourceSetName(VERB_COMPILE, target)
 
     @JvmStatic
-    fun getCompileSourceSetName(task: Task, target: String) =
-        getSourceSetName(task, VERB_COMPILE, target)
-
-    @JvmStatic
-    fun getSourceSetName(task: Task, verb: String, target: String) =
-        getSourceSetName(task.name, verb, target)
+    fun Task.getSourceSetName(verb: String, target: String) =
+        getSourceSetName(name, verb, target)
 
     @JvmStatic
     fun getSourceSetName(taskName: String, verb: String, target: String): String {
@@ -146,17 +130,12 @@ object GradleUtils {
             sb.toString()
         }
     }
-
-
-    @JvmStatic
-    fun getJavaCompile(tasks: TaskContainer, sourceSet: SourceSet) =
-        tasks.getByName(sourceSet.compileJavaTaskName) as JavaCompile
     //</editor-fold>
 
 
     //<editor-fold desc="moduleNames input property helper methods">
     @JvmStatic
-    fun setModuleNamesInputProperty(task: Task, moduleNamesCommaDelimited: String) =
-        task.inputs.property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited)
+    fun Task.setModuleNamesInputProperty(moduleNamesCommaDelimited: String) =
+        inputs.property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited)
     //</editor-fold>
 }

@@ -36,11 +36,11 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
         val main = javaExec.main ?: return
 
         jigsawPlugin.getModuleName(main)?.let {moduleName ->
-            setModuleNamesInputProperty(javaExec, moduleName)
+            javaExec.setModuleNamesInputProperty(moduleName)
 
             val classpath by lazy {javaExec.classpath}
 
-            doAfterAllOtherDoFirstActions(javaExec, Action {
+            javaExec.doAfterAllOtherDoFirstActions(Action {
                 val args = mutableListOf<String>()
 
                 addModuleArguments(args, ImmutableSet.of(moduleName), classpath.files)
@@ -53,7 +53,7 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
                 javaExec.classpath = javaExec.project.files()
             })
 
-            doBeforeAllOtherDoLastActions(javaExec, Action {
+            javaExec.doBeforeAllOtherDoLastActions(Action {
                 javaExec.main      = main
                 javaExec.classpath = classpath
             })

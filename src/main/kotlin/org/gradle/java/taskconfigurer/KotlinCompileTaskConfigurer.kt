@@ -25,7 +25,7 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
 import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
 import org.gradle.java.GradleUtils.getCompileSourceSetName
-import org.gradle.java.GradleUtils.getSourceSet
+import org.gradle.java.GradleUtils.sourceSets
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.Modules.splitIntoModulePathAndPatchModule
 import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
@@ -38,7 +38,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
     get() = KotlinCompile::class.java
 
     override fun configureTask(kotlinCompile: KotlinCompile, jigsawPlugin: JigsawPlugin) {
-        val sourceSetName = getCompileSourceSetName(kotlinCompile, TARGET)
+        val sourceSetName = kotlinCompile.getCompileSourceSetName(TARGET)
 
         val moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName)
 
@@ -50,7 +50,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
                 val classpath by lazy {kotlinCompile.classpath}
 
-                doAfterAllOtherDoFirstActions(kotlinCompile, Action {
+                kotlinCompile.doAfterAllOtherDoFirstActions(Action {
                     val project = kotlinCompile.project
 
                     //TODO: .getCompileTaskName(LANGUAGE_NAME_KOTLIN)
@@ -58,7 +58,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
                         configureTask(
                             kotlinCompile,
                             jigsawPlugin.moduleNameIsset,
-                            classpath + getSourceSet(project, TEST_SOURCE_SET_NAME).allSource.sourceDirectories //TODO? allSource
+                            classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).allSource.sourceDirectories //TODO? allSource
                         )
 
                     //TODO: ensure works
@@ -71,21 +71,21 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
                     }
                 })
 
-                doBeforeAllOtherDoLastActions(kotlinCompile, Action {kotlinCompile.classpath = classpath})
+                kotlinCompile.doBeforeAllOtherDoLastActions(Action {kotlinCompile.classpath = classpath})
             }
         }
         else {
             // source set contains at least one module-info.java
             val classpath by lazy {kotlinCompile.classpath}
 
-            doAfterAllOtherDoFirstActions(kotlinCompile, Action {
+            kotlinCompile.doAfterAllOtherDoFirstActions(Action {
                 val moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values
 
                 //TODO: FILTER BASED ON PRESENCE OF MODULE
                 configureTask(kotlinCompile, moduleNameIcoll, classpath)
             })
 
-            doBeforeAllOtherDoLastActions(kotlinCompile, Action {kotlinCompile.classpath = classpath})
+            kotlinCompile.doBeforeAllOtherDoLastActions(Action {kotlinCompile.classpath = classpath})
         }
     }
 
@@ -96,8 +96,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
         kotlinJvmOptions.freeCompilerArgs = args
 
-        splitIntoModulePathAndPatchModule(
-            classpath.files,
+        classpath.files.splitIntoModulePathAndPatchModule(
             moduleNameIcoll,
             {modulePathFileList ->
                 args +=

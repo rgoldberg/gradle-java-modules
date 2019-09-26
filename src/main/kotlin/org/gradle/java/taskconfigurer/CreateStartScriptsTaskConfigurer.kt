@@ -40,11 +40,11 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
         val main = createStartScripts.mainClassName ?: return
 
         jigsawPlugin.getModuleName(main)?.let {moduleName ->
-            setModuleNamesInputProperty(createStartScripts, moduleName)
+            createStartScripts.setModuleNamesInputProperty(moduleName)
 
             val classpath by lazy {createStartScripts.classpath}
 
-            doAfterAllOtherDoFirstActions(createStartScripts, Action {
+            createStartScripts.doAfterAllOtherDoFirstActions(Action {
                 classpath
 
                 val args = mutableListOf<String>()
@@ -64,7 +64,7 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
                 createStartScripts.classpath      = createStartScripts.project.files()
             })
 
-            doBeforeAllOtherDoLastActions(createStartScripts, Action {
+            createStartScripts.doBeforeAllOtherDoLastActions(Action {
                 replaceLibDirectoryPlaceholder(createStartScripts.unixScript,    "\\\$APP_HOME/lib",  getUnixLineSeparator())
                 replaceLibDirectoryPlaceholder(createStartScripts.windowsScript, "%APP_HOME%\\\\lib", getWindowsLineSeparator())
 

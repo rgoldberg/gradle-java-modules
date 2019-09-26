@@ -31,19 +31,18 @@ object Modules {
     private val LS = lineSeparator()
 
 
-    fun splitIntoModulePathAndPatchModule(
-        classpathFileSet:    Set<File>,
+    fun Set<File>.splitIntoModulePathAndPatchModule(
         moduleNameIcoll:     ImmutableCollection<String>,
         modulePathConsumer:  (List<File>) -> Unit,
         patchModuleConsumer: (List<File>) -> Unit
     ) {
         // determine which classpath elements will be in --module-path, and which in --patch-module
-        val classpathFileCount  = classpathFileSet.size
+        val classpathFileCount  = size
         val modulePathFileList  = ArrayList<File>(classpathFileCount)
         val patchModuleFileList = ArrayList<File>(classpathFileCount)
 
-        for (classpathFile in classpathFileSet) {
-            if (containsModules(classpathFile.toPath())) {
+        for (classpathFile in this) {
+            if (classpathFile.toPath().containsModules) {
                 // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
                 modulePathFileList += classpathFile
             }
@@ -76,12 +75,13 @@ object Modules {
     }
 
     // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
-    private fun containsModules(dirPath: Path) =
+    val Path.containsModules
+    get() =
         try {
-            ! isDirectory(dirPath)
-            || newDirectoryStream(dirPath, "{module-info.class,*.jar}").use {it.iterator().hasNext()}
+            ! isDirectory(this)
+            || newDirectoryStream(this, "{module-info.class,*.jar}").use {it.iterator().hasNext()}
         }
         catch (ex: IOException) {
-            throw GradleException("Could not determine if directory contains modules: " + dirPath, ex)
+            throw GradleException("Could not determine if directory contains modules: " + this, ex)
         }
 }

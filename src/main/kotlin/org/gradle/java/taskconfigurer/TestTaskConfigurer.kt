@@ -44,7 +44,7 @@ class TestTaskConfigurer: TaskConfigurer<Test> {
 
         val classpath by lazy {test.classpath}
 
-        doAfterAllOtherDoFirstActions(test, Action {
+        test.doAfterAllOtherDoFirstActions(Action {
             val classpathFileSet = classpath.files
 
             //HACK:
@@ -123,6 +123,6 @@ class TestTaskConfigurer: TaskConfigurer<Test> {
             test.classpath = test.project.files()
         })
 
-        doBeforeAllOtherDoLastActions(test, Action {test.classpath = classpath})
+        test.doBeforeAllOtherDoLastActions(Action {test.classpath = classpath})
     }
 }

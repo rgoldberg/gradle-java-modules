@@ -30,8 +30,9 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.GradleUtils.doAfterAllOtherDoFirstActions
 import org.gradle.java.GradleUtils.doBeforeAllOtherDoLastActions
-import org.gradle.java.GradleUtils.getSourceSet
-import org.gradle.java.GradleUtils.getSourceSetName
+import org.gradle.java.GradleUtils.getCompileSourceSet
+import org.gradle.java.GradleUtils.getCompileSourceSetName
+import org.gradle.java.GradleUtils.sourceSets
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_MODULES
 import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_READS
@@ -47,7 +48,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
 
 
     override fun configureTask(javaCompile: JavaCompile, jigsawPlugin: JigsawPlugin) {
-        val sourceSetName = getSourceSetName(javaCompile)
+        val sourceSetName = javaCompile.getCompileSourceSetName(TARGET)
 
         val moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName)
 
@@ -60,7 +61,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
 
                 val classpath by lazy {javaCompile.classpath}
 
-                doAfterAllOtherDoFirstActions(javaCompile, Action {
+                javaCompile.doAfterAllOtherDoFirstActions(Action {
                     val project = javaCompile.project
 
                     val moduleNameIsset = jigsawPlugin.moduleNameIsset
@@ -69,7 +70,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                         configureTask(
                             javaCompile,
                             moduleNameIsset,
-                            classpath + getSourceSet(project, TEST_SOURCE_SET_NAME).allJava.sourceDirectories
+                            classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).allJava.sourceDirectories
                         )
 
                     project.tasks.withType(Test::class.java).configureEach {test ->
@@ -87,14 +88,14 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                     }
                 })
 
-                doBeforeAllOtherDoLastActions(javaCompile, Action {javaCompile.classpath = classpath})
+                javaCompile.doBeforeAllOtherDoLastActions(Action {javaCompile.classpath = classpath})
             }
         }
         else {
             // source set contains at least one module-info.java
             val classpath by lazy {javaCompile.classpath}
 
-            doAfterAllOtherDoFirstActions(javaCompile, Action {
+            javaCompile.doAfterAllOtherDoFirstActions(Action {
                 val moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values
 
                 if (moduleNameIbyModuleInfoJavaPath.size > 1) {
@@ -139,7 +140,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                     // for each existing output directory, d, replace with subdirectories of d, one for each compile module name
 
                     //TODO: only works if SourceSet#output#classesDirs is a ConfigurableFileCollection
-                    val outputClassesDirs = getSourceSet(javaCompile).output.classesDirs as ConfigurableFileCollection
+                    val outputClassesDirs = javaCompile.getCompileSourceSet(TARGET).output.classesDirs as ConfigurableFileCollection
 
                     //TODO: ensure it is OK to change SourceSet#output#classesDirs during execution phase
                     outputClassesDirs.setFrom(
@@ -152,7 +153,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                 configureTask(javaCompile, moduleNameIcoll, classpath)
             })
 
-            doBeforeAllOtherDoLastActions(javaCompile, Action {javaCompile.classpath = classpath})
+            javaCompile.doBeforeAllOtherDoLastActions(Action {javaCompile.classpath = classpath})
         }
     }
 
@@ -210,5 +211,10 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
 
     private fun appendModuleSourceAlternate(moduleSource: String, commonPrefixLength: Int, commonSuffixLength: Int, sb: StringBuilder) {
         sb.append(moduleSource, commonPrefixLength, moduleSource.length - commonSuffixLength)
+    }
+
+
+    companion object {
+        private const val TARGET = "Java"
     }
 }

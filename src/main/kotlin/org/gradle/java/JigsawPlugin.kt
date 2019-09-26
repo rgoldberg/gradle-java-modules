@@ -50,9 +50,8 @@ import org.gradle.api.Task
 import org.gradle.api.logging.Logging.getLogger
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.java.GradleUtils.getJavaCompile
-import org.gradle.java.GradleUtils.getSourceSets
 import org.gradle.java.GradleUtils.setModuleNamesInputProperty
+import org.gradle.java.GradleUtils.sourceSets
 import org.gradle.java.jdk.JavaSourceTool.Companion.FILE_NAME_MODULE_INFO_JAVA
 import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_RELEASE
 import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_SOURCE
@@ -105,7 +104,7 @@ class JigsawPlugin: Plugin<Project> {
     }
 
     fun setModuleNamesInputProperty(task: Task) =
-        setModuleNamesInputProperty(task, moduleNameIsset.joinToString(","))
+        task.setModuleNamesInputProperty(moduleNameIsset.joinToString(","))
 
     fun register(taskConfigurer: TaskConfigurer<out Task>) {
         taskConfigurerSet += taskConfigurer
@@ -164,14 +163,16 @@ class JigsawPlugin: Plugin<Project> {
 
         val tasks = project.tasks
 
-        getSourceSets(project).stream()
+        project.sourceSets.stream()
         .flatMap {sourceSet ->
             stream(sourceSet.allJava.matching {pattern -> pattern.include("**/" + FILE_NAME_MODULE_INFO_JAVA)})
             .map {sourceSet to it.toPath()}
         }
         .forEach {(sourceSet, moduleInfoJavaPath) ->
             try {
-                val parseResult = JavaParser(ParserConfiguration().setLanguageLevel(getLanguageLevel(getJavaCompile(tasks, sourceSet)))).parse(moduleInfoJavaPath)
+                val parseResult =
+                    JavaParser(ParserConfiguration().setLanguageLevel(getLanguageLevel(tasks.getByName(sourceSet.compileJavaTaskName) as JavaCompile)))
+                    .parse(moduleInfoJavaPath)
 
                 if (! parseResult.isSuccessful) {
                     throw GradleException(

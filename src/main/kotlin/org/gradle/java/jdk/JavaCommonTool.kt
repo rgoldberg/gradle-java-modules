@@ -43,8 +43,7 @@ interface JavaCommonTool {
 
         @JvmStatic
         fun addModuleArguments(args: MutableList<String>, moduleNameIcoll: ImmutableCollection<String>, classpathFileSet: Set<File>) {
-            splitIntoModulePathAndPatchModule(
-                classpathFileSet,
+            classpathFileSet.splitIntoModulePathAndPatchModule(
                 moduleNameIcoll,
                 {modulePathFileList ->
                     args += OPTION_MODULE_PATH
