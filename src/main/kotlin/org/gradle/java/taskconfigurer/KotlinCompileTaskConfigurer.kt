@@ -17,7 +17,6 @@ package org.gradle.java.taskconfigurer
 
 
 import com.google.common.collect.ImmutableCollection
-import java.io.File.pathSeparator
 import org.gradle.api.Action
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
@@ -28,7 +27,7 @@ import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.getCompileSourceSetName
 import org.gradle.java.util.sourceSets
-import org.gradle.java.util.splitIntoModulePathAndPatchModule
+import org.gradle.kotlin.tool.KOTLINC
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
@@ -66,7 +65,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
                         val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
 
                         if (testModuleNameCommaDelimitedString.isNotEmpty()) {
-                            args += OPTION_ADD_MODULES + testModuleNameCommaDelimitedString
+                            args += KOTLINC.OPTION_ADD_MODULES + testModuleNameCommaDelimitedString
                         }
                     }
                 })
@@ -96,26 +95,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
         kotlinJvmOptions.freeCompilerArgs = args
 
-        classpath.files.splitIntoModulePathAndPatchModule(
-            moduleNameIcoll,
-            {modulePathFileList ->
-                args +=
-                    modulePathFileList.joinTo(
-                        StringBuilder(
-                            OPTION_MODULE_PATH.length
-                            + modulePathFileList.size
-                            - 1
-                            + modulePathFileList.stream().mapToInt {patchModuleFile -> patchModuleFile.toString().length}.sum()
-                        )
-                        .append(OPTION_MODULE_PATH),
-                        pathSeparator
-                    )
-                    .toString()
-            },
-            {patchModuleFileList ->
-                //TODO: find kotlinc equivalent for javac's --patch-module
-            }
-        )
+        KOTLINC.addModuleArguments(args, moduleNameIcoll, classpath.files)
 
         kotlinCompile.classpath = kotlinCompile.project.files()
 
@@ -125,8 +105,5 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
     companion object {
         private const val TARGET = "Kotlin"
-
-        private const val OPTION_ADD_MODULES = "-Xadd-modules="
-        private const val OPTION_MODULE_PATH = "-Xmodule-path="
     }
 }

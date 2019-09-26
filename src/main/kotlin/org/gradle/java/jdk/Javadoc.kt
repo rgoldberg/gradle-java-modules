@@ -16,24 +16,24 @@
 package org.gradle.java.jdk
 
 
-interface Javadoc: JavaSourceTool {
+val JAVADOC = object: Javadoc() {}
 
-    companion object {
-        const val OPTION_EXPAND_REQUIRES      = "--expand-requires"
-        const val OPTION_SHOW_MEMBERS         = "--show-members"
-        const val OPTION_SHOW_MODULE_CONTENTS = "--show-module-contents"
-        const val OPTION_SHOW_PACKAGES        = "--show-packages"
-        const val OPTION_SHOW_TYPES           = "--show-types"
+abstract class Javadoc protected constructor(): JavaSourceTool() {
 
-        // OPTION_EXPAND_REQUIRES values
-        const val TRANSITIVE = "transitive"
+    val OPTION_EXPAND_REQUIRES      = "--expand-requires"
+    val OPTION_SHOW_MEMBERS         = "--show-members"
+    val OPTION_SHOW_MODULE_CONTENTS = "--show-module-contents"
+    val OPTION_SHOW_PACKAGES        = "--show-packages"
+    val OPTION_SHOW_TYPES           = "--show-types"
 
-        // OPTION_EXPAND_REQUIRES, OPTION_SHOW_MODULE_CONTENTS & OPTION_SHOW_PACKAGES values
-        const val ALL = "all"
+    // OPTION_EXPAND_REQUIRES values
+    val TRANSITIVE = "transitive"
 
-        // OPTION_SHOW_MEMBERS & OPTION_SHOW_TYPES values
-        const val PUBLIC  = "public"
-        const val PACKAGE = "package"
-        const val PRIVATE = "private"
-    }
+    // OPTION_EXPAND_REQUIRES, OPTION_SHOW_MODULE_CONTENTS & OPTION_SHOW_PACKAGES values
+    val ALL = "all"
+
+    // OPTION_SHOW_MEMBERS & OPTION_SHOW_TYPES values
+    val PUBLIC  = "public"
+    val PACKAGE = "package"
+    val PRIVATE = "private"
 }

@@ -16,15 +16,15 @@
 package org.gradle.java.jdk
 
 
-interface Jar {
+val JAR = object: Jar() {}
 
-    companion object {
-        // module options: create | update
-        const val OPTION_HASH_MODULES   = "--hash-modules"
-        const val OPTION_MODULE_PATH    = "--module-path"
-        const val OPTION_MODULE_VERSION = "--module-version"
+abstract class Jar protected constructor() {
 
-        // module options: describe
-        const val OPTION_DESCRIBE_MODULE = "--describe-module"
-    }
+    // module options: create | update
+    val OPTION_HASH_MODULES   = "--hash-modules"
+    val OPTION_MODULE_PATH    = "--module-path"
+    val OPTION_MODULE_VERSION = "--module-version"
+
+    // module options: describe
+    val OPTION_DESCRIBE_MODULE = "--describe-module"
 }

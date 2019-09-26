@@ -50,9 +50,7 @@ import org.gradle.api.Task
 import org.gradle.api.logging.Logging.getLogger
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.java.jdk.JavaSourceTool.Companion.FILE_NAME_MODULE_INFO_JAVA
-import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_RELEASE
-import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_SOURCE
+import org.gradle.java.jdk.JAVAC
 import org.gradle.java.taskconfigurer.CreateStartScriptsTaskConfigurer
 import org.gradle.java.taskconfigurer.JavaCompileTaskConfigurer
 import org.gradle.java.taskconfigurer.JavaExecTaskConfigurer
@@ -165,7 +163,7 @@ class JigsawPlugin: Plugin<Project> {
 
         project.sourceSets.stream()
         .flatMap {sourceSet ->
-            stream(sourceSet.allJava.matching {pattern -> pattern.include("**/" + FILE_NAME_MODULE_INFO_JAVA)})
+            stream(sourceSet.allJava.matching {pattern -> pattern.include("**/" + JAVAC.FILE_NAME_MODULE_INFO_JAVA)})
             .map {sourceSet to it.toPath()}
         }
         .forEach {(sourceSet, moduleInfoJavaPath) ->
@@ -239,12 +237,12 @@ class JigsawPlugin: Plugin<Project> {
         while (argItr.hasNext()) {
             val arg = argItr.next()
 
-            val source = getOptionValueWhitespaceSeparator(OPTION_SOURCE, arg, argItr)
+            val source = getOptionValueWhitespaceSeparator(JAVAC.OPTION_SOURCE, arg, argItr)
             if (source.isNotEmpty()) {
                 sourceCompatibility = source
             }
             else {
-                val release = getOptionValueWhitespaceOrOtherSeparator(OPTION_RELEASE, '=', arg, argItr)
+                val release = getOptionValueWhitespaceOrOtherSeparator(JAVAC.OPTION_RELEASE, '=', arg, argItr)
                 if (release.isNotEmpty()) {
                     sourceCompatibility = release
                 }

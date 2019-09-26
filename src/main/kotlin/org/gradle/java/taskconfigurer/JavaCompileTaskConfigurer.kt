@@ -29,10 +29,7 @@ import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_MODULES
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_READS
-import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
-import org.gradle.java.jdk.JavaSourceTool.Companion.OPTION_MODULE_SOURCE_PATH
+import org.gradle.java.jdk.JAVAC
 import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
@@ -77,11 +74,11 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                         val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
 
                         if (testModuleNameCommaDelimitedString.isNotEmpty()) {
-                            args += OPTION_ADD_MODULES
+                            args += JAVAC.OPTION_ADD_MODULES
                             args += testModuleNameCommaDelimitedString
 
                             moduleNameIsset.forEach {moduleName ->
-                                args += OPTION_ADD_READS
+                                args += JAVAC.OPTION_ADD_READS
                                 args += moduleName + '=' + testModuleNameCommaDelimitedString
                             }
                         }
@@ -105,7 +102,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
 
                     val args = javaCompile.options.compilerArgs
 
-                    args += OPTION_MODULE_SOURCE_PATH
+                    args += JAVAC.OPTION_MODULE_SOURCE_PATH
                     args +=
                         getModuleSourcePath(
                             moduleNameIbyModuleInfoJavaPath.entries.stream()
@@ -160,7 +157,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
     private fun configureTask(javaCompile: JavaCompile, moduleNameIcoll: ImmutableCollection<String>, classpath: FileCollection): MutableList<String> {
         val args = javaCompile.options.compilerArgs
 
-        addModuleArguments(args, moduleNameIcoll, classpath.files)
+        JAVAC.addModuleArguments(args, moduleNameIcoll, classpath.files)
 
         javaCompile.classpath = javaCompile.project.files()
 

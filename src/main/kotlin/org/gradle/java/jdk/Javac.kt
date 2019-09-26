@@ -16,18 +16,18 @@
 package org.gradle.java.jdk
 
 
-interface Javac: JavaSourceTool {
+val JAVAC = object: Javac() {}
 
-    companion object {
-        const val OPTION_TARGET = "-target"
+abstract class Javac protected constructor(): JavaSourceTool() {
 
-        // module options
-        const val OPTION_DEFAULT_MODULE_FOR_CREATED_FILES = "--default-module-for-created-files"
-        const val OPTION_MODULE_VERSION                   = "--module-version"
-        const val OPTION_PREFER                           = "-Xprefer:"
-        const val OPTION_PROCESSOR_MODULE_PATH            = "--processor-module-path"
+    val OPTION_TARGET = "-target" //TODO? --target for Java 13+
 
-        // OPTION_PREFER values
-        const val SOURCE = "source"
-    }
+    // module options
+    val OPTION_DEFAULT_MODULE_FOR_CREATED_FILES = "--default-module-for-created-files"
+    val OPTION_MODULE_VERSION                   = "--module-version"
+    val OPTION_PREFER                           = "-Xprefer:"
+    val OPTION_PROCESSOR_MODULE_PATH            = "--processor-module-path"
+
+    // OPTION_PREFER values
+    val SOURCE = "source"
 }

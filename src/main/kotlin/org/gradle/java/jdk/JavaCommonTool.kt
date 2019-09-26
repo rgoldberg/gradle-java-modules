@@ -22,48 +22,47 @@ import java.io.File.pathSeparator
 import org.gradle.java.util.splitIntoModulePathAndPatchModule
 
 
-interface JavaCommonTool {
+internal val JAVA_COMMON_TOOL = object: JavaCommonTool() {}
 
-    companion object {
-        const val OPTION_ADD_EXPORTS         = "--add-exports"
-        const val OPTION_ADD_MODULES         = "--add-modules"
-        const val OPTION_ADD_READS           = "--add-reads"
-        const val OPTION_CLASS_PATH          = "--class-path"
-        const val OPTION_LIMIT_MODULES       = "--limit-modules"
-        const val OPTION_MODULE              = "--module"
-        const val OPTION_MODULE_PATH         = "--module-path"
-        const val OPTION_PATCH_MODULE        = "--patch-module"
-        const val OPTION_UPGRADE_MODULE_PATH = "--upgrade-module-path"
+abstract class JavaCommonTool protected constructor() {
 
-        const val ALL_MODULE_PATH = "ALL-MODULE-PATH"
-        const val ALL_SYSTEM      = "ALL-SYSTEM"
+    val OPTION_ADD_EXPORTS         = "--add-exports"
+    val OPTION_ADD_MODULES         = "--add-modules"
+    val OPTION_ADD_READS           = "--add-reads"
+    val OPTION_CLASS_PATH          = "--class-path"
+    val OPTION_LIMIT_MODULES       = "--limit-modules"
+    val OPTION_MODULE              = "--module"
+    val OPTION_MODULE_PATH         = "--module-path"
+    val OPTION_PATCH_MODULE        = "--patch-module"
+    val OPTION_UPGRADE_MODULE_PATH = "--upgrade-module-path"
 
-        const val ALL_UNNAMED = "ALL-UNNAMED"
+    val ALL_MODULE_PATH = "ALL-MODULE-PATH"
+    val ALL_SYSTEM      = "ALL-SYSTEM"
+
+    val ALL_UNNAMED = "ALL-UNNAMED"
 
 
-        @JvmStatic
-        fun addModuleArguments(args: MutableList<String>, moduleNameIcoll: ImmutableCollection<String>, classpathFileSet: Set<File>) {
-            classpathFileSet.splitIntoModulePathAndPatchModule(
-                moduleNameIcoll,
-                {modulePathFileList ->
-                    args += OPTION_MODULE_PATH
-                    args += modulePathFileList.joinToString(pathSeparator)
-                },
-                {patchModuleFileList ->
-                    // moduleNameIcoll is guaranteed to have exactly one element
-                    val moduleName = moduleNameIcoll.iterator().next()
+    fun addModuleArguments(args: MutableList<String>, moduleNameIcoll: ImmutableCollection<String>, classpathFileSet: Set<File>) {
+        classpathFileSet.splitIntoModulePathAndPatchModule(
+            moduleNameIcoll,
+            {modulePathFileList ->
+                args += OPTION_MODULE_PATH
+                args += modulePathFileList.joinToString(pathSeparator)
+            },
+            {patchModuleFileList ->
+                // moduleNameIcoll is guaranteed to have exactly one element
+                val moduleName = moduleNameIcoll.iterator().next()
 
-                    args += OPTION_PATCH_MODULE
-                    args +=
-                        patchModuleFileList.joinTo(
-                            StringBuilder(moduleName.length + patchModuleFileList.size + patchModuleFileList.sumBy {it.toString().length})
-                            .append(moduleName)
-                            .append('='),
-                            pathSeparator
-                        )
-                        .toString()
-                }
-            )
-        }
+                args += OPTION_PATCH_MODULE
+                args +=
+                    patchModuleFileList.joinTo(
+                        StringBuilder(moduleName.length + patchModuleFileList.size + patchModuleFileList.sumBy {it.toString().length})
+                        .append(moduleName)
+                        .append('='),
+                        pathSeparator
+                    )
+                    .toString()
+            }
+        )
     }
 }

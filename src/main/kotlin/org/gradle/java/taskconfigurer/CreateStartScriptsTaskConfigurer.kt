@@ -22,8 +22,7 @@ import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.application.CreateStartScripts
 import org.gradle.java.JigsawPlugin
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE_PATH
+import org.gradle.java.jdk.JAVA
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.setModuleNamesInputProperty
@@ -53,10 +52,10 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
                     args += it
                 }
 
-                args += OPTION_MODULE_PATH
+                args += JAVA.OPTION_MODULE_PATH
                 args += LIB_DIR_PLACEHOLDER
 
-                args += OPTION_MODULE
+                args += JAVA.OPTION_MODULE
                 args += main
 
                 createStartScripts.defaultJvmOpts = args

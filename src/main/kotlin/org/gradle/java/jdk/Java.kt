@@ -16,24 +16,24 @@
 package org.gradle.java.jdk
 
 
-interface Java: JavaCommonTool {
+val JAVA = object: Java() {}
 
-    companion object {
-        // module options
-        const val OPTION_ADD_OPENS              = "--add-opens"
-        const val OPTION_DESCRIBE_MODULE        = "--describe-module"
-        const val OPTION_ILLEGAL_ACCESS         = "--illegal-access="
-        const val OPTION_LIST_MODULES           = "--list-modules"
-        const val OPTION_SHOW_MODULE_RESOLUTION = "--show-module-resolution"
-        const val OPTION_VALIDATE_MODULES       = "--validate-modules"
+abstract class Java protected constructor(): JavaCommonTool() {
 
-        // OPTION_ADD_MODULES values
-        const val ALL_DEFAULT = "ALL-DEFAULT"
+    // module options
+    val OPTION_ADD_OPENS              = "--add-opens"
+    val OPTION_DESCRIBE_MODULE        = "--describe-module"
+    val OPTION_ILLEGAL_ACCESS         = "--illegal-access="
+    val OPTION_LIST_MODULES           = "--list-modules"
+    val OPTION_SHOW_MODULE_RESOLUTION = "--show-module-resolution"
+    val OPTION_VALIDATE_MODULES       = "--validate-modules"
 
-        // OPTION_ILLEGAL_ACCESS values
-        const val PERMIT = "permit"
-        const val WARN   = "warn"
-        const val DEBUG  = "debug"
-        const val DENY   = "deny"
-    }
+    // OPTION_ADD_MODULES values
+    val ALL_DEFAULT = "ALL-DEFAULT"
+
+    // OPTION_ILLEGAL_ACCESS values
+    val PERMIT = "permit"
+    val WARN   = "warn"
+    val DEBUG  = "debug"
+    val DENY   = "deny"
 }

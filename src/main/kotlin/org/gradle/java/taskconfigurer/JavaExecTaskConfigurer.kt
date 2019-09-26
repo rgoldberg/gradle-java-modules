@@ -20,8 +20,7 @@ import com.google.common.collect.ImmutableSet
 import org.gradle.api.Action
 import org.gradle.api.tasks.JavaExec
 import org.gradle.java.JigsawPlugin
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_MODULE
-import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
+import org.gradle.java.jdk.JAVA
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.setModuleNamesInputProperty
@@ -43,9 +42,9 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
             javaExec.doAfterAllOtherDoFirstActions(Action {
                 val args = mutableListOf<String>()
 
-                addModuleArguments(args, ImmutableSet.of(moduleName), classpath.files)
+                JAVA.addModuleArguments(args, ImmutableSet.of(moduleName), classpath.files)
 
-                args += OPTION_MODULE
+                args += JAVA.OPTION_MODULE
                 args += main
 
                 javaExec.jvmArgs(args)

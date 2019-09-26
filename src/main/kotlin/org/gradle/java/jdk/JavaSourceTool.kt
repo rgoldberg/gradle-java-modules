@@ -16,19 +16,19 @@
 package org.gradle.java.jdk
 
 
-interface JavaSourceTool: JavaCommonTool {
+internal val JAVA_SOURCE_TOOL = object: JavaSourceTool() {}
 
-    companion object {
-        const val OPTION_RELEASE = "--release"
-        const val OPTION_SOURCE  = "-source"
+abstract class JavaSourceTool protected constructor(): JavaCommonTool() {
 
-        // module options
-        const val OPTION_MODULE_SOURCE_PATH = "--module-source-path"
-        const val OPTION_SYSTEM             = "--system"
+    val OPTION_RELEASE = "--release"
+    val OPTION_SOURCE  = "-source" //TODO? --source for Java 13+
 
-        // OPTION_SYSTEM values
-        const val NONE = "none"
+    // module options
+    val OPTION_MODULE_SOURCE_PATH = "--module-source-path"
+    val OPTION_SYSTEM             = "--system"
 
-        const val FILE_NAME_MODULE_INFO_JAVA = "module-info.java"
-    }
+    // OPTION_SYSTEM values
+    val NONE = "none"
+
+    val FILE_NAME_MODULE_INFO_JAVA = "module-info.java"
 }

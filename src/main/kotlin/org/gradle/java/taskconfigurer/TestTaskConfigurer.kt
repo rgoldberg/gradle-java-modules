@@ -25,10 +25,7 @@ import org.gradle.api.file.RelativePath
 import org.gradle.api.internal.file.RelativeFile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
-import org.gradle.java.jdk.JavaCommonTool.Companion.ALL_MODULE_PATH
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_MODULES
-import org.gradle.java.jdk.JavaCommonTool.Companion.OPTION_ADD_READS
-import org.gradle.java.jdk.JavaCommonTool.Companion.addModuleArguments
+import org.gradle.java.jdk.JAVA
 import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
@@ -104,16 +101,16 @@ class TestTaskConfigurer: TaskConfigurer<Test> {
 
             val moduleNameIsset = jigsawPlugin.moduleNameIsset
 
-            addModuleArguments(args, moduleNameIsset, classpathFileSet)
+            JAVA.addModuleArguments(args, moduleNameIsset, classpathFileSet)
 
-            args += OPTION_ADD_MODULES
-            args += ALL_MODULE_PATH
+            args += JAVA.OPTION_ADD_MODULES
+            args += JAVA.ALL_MODULE_PATH
 
             val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
 
             if (testModuleNameCommaDelimitedString.isNotEmpty()) {
                 moduleNameIsset.forEach {moduleName ->
-                    args += OPTION_ADD_READS
+                    args += JAVA.OPTION_ADD_READS
                     args += moduleName + '=' + testModuleNameCommaDelimitedString
                 }
             }
