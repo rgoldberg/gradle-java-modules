@@ -16,12 +16,14 @@
 package org.gradle.java.taskconfigurer
 
 
-import com.google.common.collect.ImmutableCollection
-import com.google.common.collect.ImmutableSet
-import com.google.common.collect.ImmutableSet.toImmutableSet
 import com.google.common.collect.Streams.stream
 import java.io.File
+import java.util.TreeSet
 import java.util.stream.Collectors.joining
+import java.util.stream.Collectors.toCollection
+import kotlinx.collections.immutable.ImmutableCollection
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.toImmutableSet
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
@@ -61,12 +63,12 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                 javaCompile.doAfterAllOtherDoFirstActions(Action {
                     val project = javaCompile.project
 
-                    val moduleNameIsset = jigsawPlugin.moduleNameIsset
+                    val moduleNameIset = jigsawPlugin.moduleNameIset
 
                     val args =
                         configureTask(
                             javaCompile,
-                            moduleNameIsset,
+                            moduleNameIset,
                             classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).allJava.sourceDirectories
                         )
 
@@ -75,7 +77,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                             args += JAVAC.OPTION_ADD_MODULES
                             args += testModuleNameCommaDelimitedString
 
-                            moduleNameIsset.forEach {moduleName ->
+                            moduleNameIset.forEach {moduleName ->
                                 args += JAVAC.OPTION_ADD_READS
                                 args += moduleName + '=' + testModuleNameCommaDelimitedString
                             }
@@ -128,7 +130,8 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                                     )
                                     .toString()
                             }
-                            .collect(toImmutableSet())
+                            .collect(toCollection {TreeSet<String>()})
+                            .toImmutableSet()
                         )
 
                     // must change the classes output directories for the SourceSet:

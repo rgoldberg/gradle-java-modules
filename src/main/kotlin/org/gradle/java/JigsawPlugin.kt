@@ -33,16 +33,21 @@ import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_11
 import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_12
 import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_13
 import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_14
-import com.google.common.collect.ImmutableSortedMap
-import com.google.common.collect.ImmutableSortedMap.toImmutableSortedMap
-import com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet
 import com.google.common.collect.Streams.stream
 import java.io.IOException
 import java.lang.System.lineSeparator
 import java.nio.file.Path
+import java.util.TreeMap
+import java.util.TreeSet
 import java.util.stream.Collectors.joining
+import java.util.stream.Collectors.toCollection
+import java.util.stream.Collectors.toMap
 import java.util.stream.Stream
 import java.util.stream.Stream.concat
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.collections.immutable.toImmutableSet
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -67,10 +72,11 @@ class JigsawPlugin: Plugin<Project> {
     //<editor-fold desc="Fields">
     private lateinit var project: Project
 
-    val moduleNameIsset by lazy {
+    val moduleNameIset by lazy {
         moduleNameIbyModuleInfoJavaPath_IbySourceSetName.values.stream()
         .flatMap {it.values.stream()}
-        .collect(toImmutableSortedSet(naturalOrder()))
+        .collect(toCollection {TreeSet<String>()})
+        .toImmutableSet()
     }
 
     private val taskConfigurerSet = mutableSetOf<TaskConfigurer<out Task>>()
@@ -79,17 +85,17 @@ class JigsawPlugin: Plugin<Project> {
 
     //<editor-fold desc="Accessors">
     fun getModuleNameIbyModuleInfoJavaPath(sourceSetName: String) =
-        moduleNameIbyModuleInfoJavaPath_IbySourceSetName.getOrDefault(sourceSetName, ImmutableSortedMap.of())
+        moduleNameIbyModuleInfoJavaPath_IbySourceSetName.getOrDefault(sourceSetName, persistentMapOf())
 
     fun getModuleName(main: String): String? {
         val slashIndex = main.indexOf('/')
         return when {
             // build script specified module/class
-            slashIndex >= 0                -> main.substring(0, slashIndex)
+            slashIndex >= 0               -> main.substring(0, slashIndex)
             // build script specified module that is built in this build
-            moduleNameIsset.contains(main) -> main
+            moduleNameIset.contains(main) -> main
             // couldn't find module/class or module, so use non-modular command line
-            else                           -> null
+            else                          -> null
 
             //TODO: check jars in classpath for modules, possibly from:
             //    module-info.class
@@ -102,7 +108,7 @@ class JigsawPlugin: Plugin<Project> {
     }
 
     fun setModuleNamesInputProperty(task: Task) =
-        task.setModuleNamesInputProperty(moduleNameIsset.joinToString(","))
+        task.setModuleNamesInputProperty(moduleNameIset.joinToString(","))
 
     fun register(taskConfigurer: TaskConfigurer<out Task>) {
         taskConfigurerSet += taskConfigurer
@@ -156,8 +162,8 @@ class JigsawPlugin: Plugin<Project> {
 
 
     //<editor-fold desc="module-info.java parsing methods">
-    private val moduleNameIbyModuleInfoJavaPath_IbySourceSetName: ImmutableSortedMap<String, ImmutableSortedMap<Path, String>> by lazy {
-        val moduleNameByModuleInfoJavaPath_BySourceSetName = mutableMapOf<String, ImmutableSortedMap.Builder<Path, String>>()
+    private val moduleNameIbyModuleInfoJavaPath_IbySourceSetName: ImmutableMap<String, ImmutableMap<Path, String>> by lazy {
+        val moduleNameByModuleInfoJavaPath_BySourceSetName = mutableMapOf<String, TreeMap<Path, String>>()
 
         val tasks = project.tasks
 
@@ -189,10 +195,8 @@ class JigsawPlugin: Plugin<Project> {
                     )
                 }
 
-                moduleNameByModuleInfoJavaPath_BySourceSetName.computeIfAbsent(sourceSet.name) {ImmutableSortedMap.naturalOrder()}.put(
-                    moduleInfoJavaPath,
+                moduleNameByModuleInfoJavaPath_BySourceSetName.computeIfAbsent(sourceSet.name) {TreeMap()}[moduleInfoJavaPath] =
                     parseResult.result.get().module.orElseThrow(::GradleException).name.asString()
-                )
             }
             catch (ex: IOException) {
                 throw GradleException("Couldn't parse Java module name from " + moduleInfoJavaPath, ex)
@@ -201,12 +205,14 @@ class JigsawPlugin: Plugin<Project> {
 
         moduleNameByModuleInfoJavaPath_BySourceSetName.entries.stream()
         .collect(
-            toImmutableSortedMap<Map.Entry<String, ImmutableSortedMap.Builder<Path, String>>, String, ImmutableSortedMap<Path, String>>(
-                naturalOrder(),
-                java.util.function.Function {it.key},
-                java.util.function.Function {it.value.build()}
+            toMap<Map.Entry<String, TreeMap<Path, String>>, String, ImmutableMap<Path, String>, TreeMap<String, ImmutableMap<Path, String>>>(
+                {it.key},
+                {it.value.toImmutableMap()},
+                {a, _ -> a},
+                ::TreeMap
             )
         )
+        .toImmutableMap()
     }
 
     private fun getLanguageLevel(javaCompile: JavaCompile) =

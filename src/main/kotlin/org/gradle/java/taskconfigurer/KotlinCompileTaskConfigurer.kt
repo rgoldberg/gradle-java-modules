@@ -16,7 +16,7 @@
 package org.gradle.java.taskconfigurer
 
 
-import com.google.common.collect.ImmutableCollection
+import kotlinx.collections.immutable.ImmutableCollection
 import org.gradle.api.Action
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
@@ -56,7 +56,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
                     val args =
                         configureTask(
                             kotlinCompile,
-                            jigsawPlugin.moduleNameIsset,
+                            jigsawPlugin.moduleNameIset,
                             classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).allSource.sourceDirectories //TODO? allSource
                         )
 

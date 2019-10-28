@@ -99,15 +99,15 @@ class TestTaskConfigurer: TaskConfigurer<Test> {
 
             val args = mutableListOf<String>()
 
-            val moduleNameIsset = jigsawPlugin.moduleNameIsset
+            val moduleNameIset = jigsawPlugin.moduleNameIset
 
-            JAVA.addModuleArguments(args, moduleNameIsset, classpathFileSet)
+            JAVA.addModuleArguments(args, moduleNameIset, classpathFileSet)
 
             args += JAVA.OPTION_ADD_MODULES
             args += JAVA.ALL_MODULE_PATH
 
             test.moduleNameCommaDelimitedString?.let {testModuleNameCommaDelimitedString ->
-                moduleNameIsset.forEach {moduleName ->
+                moduleNameIset.forEach {moduleName ->
                     args += JAVA.OPTION_ADD_READS
                     args += moduleName + '=' + testModuleNameCommaDelimitedString
                 }

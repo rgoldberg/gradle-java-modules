@@ -16,7 +16,8 @@
 package org.gradle.java.testing
 
 
-import com.google.common.collect.ImmutableSet
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 import org.gradle.api.internal.tasks.testing.TestFramework
 import org.gradle.api.internal.tasks.testing.junit.JUnitTestFramework
 import org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestFramework
@@ -40,7 +41,7 @@ get() =
         is         JUnitTestFramework -> moduleNameIset
         is JUnitPlatformTestFramework -> moduleNameIset
         is        TestNGTestFramework -> moduleNameIset
-        else                          -> ImmutableSet.of()
+        else                          -> persistentSetOf()
     }
 
 val JUnitTestFramework.moduleNameIset
@@ -52,6 +53,6 @@ get() = JU5
 val TestNGTestFramework.moduleNameIset
 get() = TNG
 
-private val JU4: ImmutableSet<String> = ImmutableSet.of("junit")
-private val JU5: ImmutableSet<String> = ImmutableSet.of("org.junit.jupiter.api")
-private val TNG: ImmutableSet<String> = ImmutableSet.of("testng")
+private val JU4: ImmutableSet<String> = persistentSetOf("junit")
+private val JU5: ImmutableSet<String> = persistentSetOf("org.junit.jupiter.api")
+private val TNG: ImmutableSet<String> = persistentSetOf("testng")

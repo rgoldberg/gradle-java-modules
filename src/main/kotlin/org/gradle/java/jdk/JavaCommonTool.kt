@@ -16,9 +16,9 @@
 package org.gradle.java.jdk
 
 
-import com.google.common.collect.ImmutableCollection
 import java.io.File
 import java.io.File.pathSeparator
+import kotlinx.collections.immutable.ImmutableCollection
 import org.gradle.java.util.splitIntoModulePathAndPatchModule
 
 

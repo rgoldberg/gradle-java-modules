@@ -16,13 +16,13 @@
 package org.gradle.java.util
 
 
-import com.google.common.collect.ImmutableCollection
 import java.io.File
 import java.io.IOException
 import java.lang.System.lineSeparator
 import java.nio.file.Files.isDirectory
 import java.nio.file.Files.newDirectoryStream
 import java.nio.file.Path
+import kotlinx.collections.immutable.ImmutableCollection
 import org.gradle.api.GradleException
 
 

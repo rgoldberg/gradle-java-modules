@@ -114,9 +114,10 @@ System.setProperty("gradle.publish.skip.namespace.check", "true")
 repositories.jcenter()
 
 dependencies {
-    implementation(    "com.github.javaparser", "javaparser-core", "3.15.11")
-    api(               "com.google.guava",      "guava",           "28.1-jre")
-    testImplementation("org.spockframework",    "spock-core",      "1.3-groovy-2.5") {
+    implementation(    "com.github.javaparser", "javaparser-core",                   "3.15.11")
+    api(               "org.jetbrains.kotlinx", "kotlinx-collections-immutable-jvm", "0.3")
+    api(               "com.google.guava",      "guava",                             "28.1-jre")
+    testImplementation("org.spockframework",    "spock-core",                        "1.3-groovy-2.5") {
         exclude("org.codehaus.groovy", "groovy-all")
     }
     implementation(    gradleKotlinDsl())

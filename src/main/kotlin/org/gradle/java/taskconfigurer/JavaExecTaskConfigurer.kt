@@ -16,7 +16,7 @@
 package org.gradle.java.taskconfigurer
 
 
-import com.google.common.collect.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 import org.gradle.api.Action
 import org.gradle.api.tasks.JavaExec
 import org.gradle.java.JigsawPlugin
@@ -42,7 +42,7 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
             javaExec.doAfterAllOtherDoFirstActions(Action {
                 val args = mutableListOf<String>()
 
-                JAVA.addModuleArguments(args, ImmutableSet.of(moduleName), classpath.files)
+                JAVA.addModuleArguments(args, persistentSetOf(moduleName), classpath.files)
 
                 args += JAVA.OPTION_MODULE
                 args += main
