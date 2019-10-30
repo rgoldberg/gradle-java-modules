@@ -33,7 +33,6 @@ import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_11
 import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_12
 import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_13
 import com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_14
-import com.google.common.collect.Streams.stream
 import java.io.IOException
 import java.lang.System.lineSeparator
 import java.nio.file.Path
@@ -65,6 +64,7 @@ import org.gradle.java.taskconfigurer.TaskConfigurer
 import org.gradle.java.taskconfigurer.TestTaskConfigurer
 import org.gradle.java.util.setModuleNamesInputProperty
 import org.gradle.java.util.sourceSets
+import org.gradle.java.util.stream
 
 
 class JigsawPlugin: Plugin<Project> {

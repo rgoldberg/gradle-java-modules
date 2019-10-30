@@ -16,7 +16,6 @@
 package org.gradle.java.taskconfigurer
 
 
-import com.google.common.collect.Streams.stream
 import java.io.File
 import java.util.TreeSet
 import java.util.stream.Collectors.joining
@@ -38,6 +37,7 @@ import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.getCompileSourceSet
 import org.gradle.java.util.getCompileSourceSetName
 import org.gradle.java.util.sourceSets
+import org.gradle.java.util.stream
 
 
 class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
