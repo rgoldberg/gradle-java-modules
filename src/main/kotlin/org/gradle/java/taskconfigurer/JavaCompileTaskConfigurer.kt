@@ -30,7 +30,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JAVAC
-import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
+import org.gradle.java.testing.moduleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.getCompileSourceSet
@@ -71,9 +71,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                         )
 
                     project.tasks.withType(Test::class.java).configureEach {test ->
-                        val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
-
-                        if (testModuleNameCommaDelimitedString.isNotEmpty()) {
+                        test.moduleNameCommaDelimitedString?.let {testModuleNameCommaDelimitedString ->
                             args += JAVAC.OPTION_ADD_MODULES
                             args += testModuleNameCommaDelimitedString
 

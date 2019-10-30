@@ -22,7 +22,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
-import org.gradle.java.testing.getTestModuleNameCommaDelimitedString
+import org.gradle.java.testing.moduleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
 import org.gradle.java.util.getCompileSourceSetName
@@ -62,9 +62,7 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
 
                     //TODO: ensure works
                     project.tasks.withType(Test::class.java).configureEach {test ->
-                        val testModuleNameCommaDelimitedString = getTestModuleNameCommaDelimitedString(test)
-
-                        if (testModuleNameCommaDelimitedString.isNotEmpty()) {
+                        test.moduleNameCommaDelimitedString?.let {testModuleNameCommaDelimitedString ->
                             args += KOTLINC.OPTION_ADD_MODULES + testModuleNameCommaDelimitedString
                         }
                     }
