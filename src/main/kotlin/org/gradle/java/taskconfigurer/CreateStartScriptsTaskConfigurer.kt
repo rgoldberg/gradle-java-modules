@@ -16,12 +16,8 @@
 package org.gradle.java.taskconfigurer
 
 
-import com.google.common.io.MoreFiles.asCharSink
+import java.io.File
 import java.io.IOException
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.Files.readAllLines
-import java.nio.file.Path
-import java.util.stream.Stream
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.application.CreateStartScripts
@@ -69,8 +65,8 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
             })
 
             doBeforeAllOtherDoLastActions(createStartScripts, Action {
-                replaceLibDirectoryPlaceholder(createStartScripts.unixScript   .toPath(), "\\\$APP_HOME/lib",  getUnixLineSeparator())
-                replaceLibDirectoryPlaceholder(createStartScripts.windowsScript.toPath(), "%APP_HOME%\\\\lib", getWindowsLineSeparator())
+                replaceLibDirectoryPlaceholder(createStartScripts.unixScript,    "\\\$APP_HOME/lib",  getUnixLineSeparator())
+                replaceLibDirectoryPlaceholder(createStartScripts.windowsScript, "%APP_HOME%\\\\lib", getWindowsLineSeparator())
 
                 createStartScripts.mainClassName = main
                 createStartScripts.classpath     = classpath
@@ -78,14 +74,16 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
         }
     }
 
-    private fun replaceLibDirectoryPlaceholder(path: Path, libDirReplacement: String, lineSeparator: String) =
+    private fun replaceLibDirectoryPlaceholder(file: File, libDirReplacement: String, lineSeparator: String) =
         try {
-            readAllLines(path).stream().map {line -> LIB_DIR_PLACEHOLDER_REGEX.replace(line, libDirReplacement)}.use {lineStream: Stream<String> ->
-                asCharSink(path, UTF_8).writeLines(lineStream, lineSeparator)
+            file.readLines().stream().map {line -> LIB_DIR_PLACEHOLDER_REGEX.replace(line, libDirReplacement)}.use {lineStream ->
+                file.bufferedWriter().use {
+                    Iterable(lineStream::iterator).joinTo(it, lineSeparator, "", lineSeparator)
+                }
             }
         }
         catch (ex: IOException) {
-            throw GradleException("Couldn't replace placeholder in " + path, ex)
+            throw GradleException("Couldn't replace placeholder in " + file, ex)
         }
 
 
