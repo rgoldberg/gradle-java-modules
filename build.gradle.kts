@@ -1,3 +1,5 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import kotlin.text.RegexOption.IGNORE_CASE
 import org.gradle.api.JavaVersion.VERSION_1_9
 import org.gradle.api.artifacts.dsl.LockMode.STRICT
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -15,14 +17,24 @@ plugins {
     groovy
     `java-gradle-plugin`
     `java-library`
-    kotlin("jvm")                   version "1.3.61"
-    id("com.gradle.plugin-publish") version "0.10.1"
-//    id("org.ysb33r.gradletest")     version "2.0"
+    kotlin("jvm")                       version "1.3.61"
+    id("com.github.ben-manes.versions") version "0.27.0"
+    id("com.gradle.plugin-publish")     version "0.10.1"
+//    id("org.ysb33r.gradletest")         version "2.0"
 }
 
 java {
     targetCompatibility = VERSION_1_9
     sourceCompatibility = VERSION_1_9
+}
+
+internal val unstableVersionRegex = "alpha|beta|latest|m(?!\\p{Alpha})|pr|rc|snap".toRegex(IGNORE_CASE)
+
+tasks.withType<DependencyUpdatesTask> {
+    checkConstraints = true
+    rejectVersionIf {
+        ! unstableVersionRegex.containsMatchIn(currentVersion) && unstableVersionRegex.containsMatchIn(candidate.version)
+    }
 }
 
 tasks.withType<JavaCompile>().configureEach {
