@@ -26,11 +26,11 @@ import kotlinx.collections.immutable.toImmutableSet
 import org.gradle.api.Action
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
-import org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JAVAC
+import org.gradle.java.testing.isTestInput
 import org.gradle.java.testing.moduleNameCommaDelimitedString
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
@@ -52,8 +52,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
         val moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName)
 
         if (moduleNameIbyModuleInfoJavaPath.isEmpty()) {
-            //TODO: use better heuristic to determine if javaCompile is for test code
-            if (TEST_SOURCE_SET_NAME == sourceSetName) {
+            if (javaCompile.isTestInput) {
                 // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
 
                 jigsawPlugin.setModuleNamesInputProperty(javaCompile)
@@ -69,7 +68,7 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
                         configureTask(
                             javaCompile,
                             moduleNameIset,
-                            classpath + project.sourceSets.getByName(TEST_SOURCE_SET_NAME).allJava.sourceDirectories
+                            classpath + project.sourceSets.getByName(sourceSetName).allJava.sourceDirectories
                         )
 
                     project.tasks.withType(Test::class.java).configureEach {test ->
