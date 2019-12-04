@@ -16,23 +16,10 @@
 package org.gradle.java.taskconfigurer
 
 
-import kotlinx.collections.immutable.ImmutableCollection
-import org.gradle.api.Action
-import org.gradle.api.file.FileCollection
-import org.gradle.api.tasks.testing.Test
 import org.gradle.java.JigsawPlugin
 import org.gradle.java.extension.KotlinCompileOptionsInternal
 import org.gradle.java.extension.TASK_OPTIONS_EXTENSION_NAME
 import org.gradle.java.extension.ToolOptionDefaults
-import org.gradle.java.testing.isTestInput
-import org.gradle.java.testing.moduleNameCommaDelimitedString
-import org.gradle.java.util.doAfterAllOtherDoFirstActions
-import org.gradle.java.util.doBeforeAllOtherDoLastActions
-import org.gradle.java.util.getCompileSourceSetName
-import org.gradle.java.util.sourceSets
-import org.gradle.kotlin.dsl.withConvention
-import org.gradle.kotlin.tool.KOTLINC
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 
@@ -53,71 +40,5 @@ class KotlinCompileTaskConfigurer: TaskConfigurer<KotlinCompile> {
                 task
             )
         }
-    }
-
-    override fun configureTask(kotlinCompile: KotlinCompile, jigsawPlugin: JigsawPlugin) {
-        val sourceSetName = kotlinCompile.getCompileSourceSetName(TARGET)
-
-        val moduleNameIbyModuleInfoJavaPath = jigsawPlugin.getModuleNameIbyModuleInfoJavaPath(sourceSetName)
-
-        if (moduleNameIbyModuleInfoJavaPath.isEmpty()) {
-            if (kotlinCompile.isTestInput) {
-                // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
-                val classpath by lazy {kotlinCompile.classpath}
-
-                kotlinCompile.doAfterAllOtherDoFirstActions(Action {
-                    val project = kotlinCompile.project
-
-                    //TODO: .getCompileTaskName(LANGUAGE_NAME_KOTLIN)
-                    val args =
-                        configureTask(
-                            kotlinCompile,
-                            jigsawPlugin.moduleNameIset,
-                            classpath + project.sourceSets.getByName(sourceSetName).withConvention(KotlinSourceSet::class) {kotlin}.sourceDirectories
-                        )
-
-                    //TODO: ensure works
-                    project.tasks.withType(Test::class.java).configureEach {test ->
-                        test.moduleNameCommaDelimitedString?.let {testModuleNameCommaDelimitedString ->
-                            args += KOTLINC.OPTION_ADD_MODULES + testModuleNameCommaDelimitedString
-                        }
-                    }
-                })
-
-                kotlinCompile.doBeforeAllOtherDoLastActions(Action {kotlinCompile.classpath = classpath})
-            }
-        }
-        else {
-            // source set contains at least one module-info.java
-            val classpath by lazy {kotlinCompile.classpath}
-
-            kotlinCompile.doAfterAllOtherDoFirstActions(Action {
-                val moduleNameIcoll = moduleNameIbyModuleInfoJavaPath.values
-
-                //TODO: FILTER BASED ON PRESENCE OF MODULE
-                configureTask(kotlinCompile, moduleNameIcoll, classpath)
-            })
-
-            kotlinCompile.doBeforeAllOtherDoLastActions(Action {kotlinCompile.classpath = classpath})
-        }
-    }
-
-    private fun configureTask(kotlinCompile: KotlinCompile, moduleNameIcoll: ImmutableCollection<String>, classpath: FileCollection): MutableList<String> {
-        val kotlinJvmOptions = kotlinCompile.kotlinOptions
-
-        val args = ArrayList(kotlinJvmOptions.freeCompilerArgs)
-
-        kotlinJvmOptions.freeCompilerArgs = args
-
-        KOTLINC.addModuleArguments(args, moduleNameIcoll, classpath.files)
-
-        kotlinCompile.classpath = kotlinCompile.project.files()
-
-        return args
-    }
-
-
-    companion object {
-        private const val TARGET = "Kotlin"
     }
 }

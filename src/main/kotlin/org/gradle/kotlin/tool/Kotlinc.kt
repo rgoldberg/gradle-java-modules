@@ -16,12 +16,6 @@
 package org.gradle.kotlin.tool
 
 
-import java.io.File
-import java.io.File.pathSeparator
-import kotlinx.collections.immutable.ImmutableCollection
-import org.gradle.java.util.splitIntoModulePathAndPatchModule
-
-
 val KOTLINC = object: Kotlinc() {}
 
 abstract class Kotlinc protected constructor() {
@@ -32,28 +26,4 @@ abstract class Kotlinc protected constructor() {
     val OPTION_MODULE_PATH = "-Xmodule-path="
 
     val ALL_MODULE_PATH = "ALL-MODULE-PATH"
-
-
-    fun addModuleArguments(args: MutableList<String>, moduleNameIcoll: ImmutableCollection<String>, classpathFileSet: Set<File>) {
-        classpathFileSet.splitIntoModulePathAndPatchModule(
-            moduleNameIcoll,
-            {modulePathFileList ->
-                args +=
-                    modulePathFileList.joinTo(
-                        StringBuilder(
-                            OPTION_MODULE_PATH.length
-                            + modulePathFileList.size
-                            - 1
-                            + modulePathFileList.stream().mapToInt {patchModuleFile -> patchModuleFile.toString().length}.sum()
-                        )
-                        .append(OPTION_MODULE_PATH),
-                        pathSeparator
-                    )
-                    .toString()
-            },
-            {patchModuleFileList ->
-                //TODO: find kotlinc equivalent for javac's --patch-module
-            }
-        )
-    }
 }
