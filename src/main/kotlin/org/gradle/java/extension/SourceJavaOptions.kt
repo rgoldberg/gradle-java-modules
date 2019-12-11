@@ -55,14 +55,20 @@ abstract class SourceJavaOptionsInternal: SourceJavaOptions, CommonJavaOptionsIn
     }
 
 
-    override val source: ScalarOptionInternal<JavaVersion?> = DefaultScalarOptionInternal(JAVA_SOURCE_TOOL.OPTION_SOURCE, null)
+    protected open inner class Source:
+    DefaultScalarOptionInternal<JavaVersion?>(JAVA_SOURCE_TOOL.OPTION_SOURCE, null)
+    override val source: ScalarOptionInternal<JavaVersion?> = Source()
 
+    protected open inner class Release:
+    DefaultSeparableValueScalarOptionInternal<JavaVersion?>(JAVA_SOURCE_TOOL.OPTION_RELEASE, "=", null, this)
     override val release: SeparableValueScalarOptionInternal<JavaVersion?> by lazy {
-        DefaultSeparableValueScalarOptionInternal<JavaVersion?>(JAVA_SOURCE_TOOL.OPTION_RELEASE, "=", null, this)
+        Release()
     }
 
+    protected open inner class System:
+    DefaultSeparableValueScalarOptionInternal<String?>(JAVA_SOURCE_TOOL.OPTION_SYSTEM, "=", null, this)
     override val system: SeparableValueScalarOptionInternal<String?> by lazy {
-        DefaultSeparableValueScalarOptionInternal<String?>(JAVA_SOURCE_TOOL.OPTION_SYSTEM, "=", null, this)
+        System()
     }
     override fun systemDefault() {
         system(null)
@@ -71,12 +77,16 @@ abstract class SourceJavaOptionsInternal: SourceJavaOptions, CommonJavaOptionsIn
         system(JAVA_SOURCE_TOOL.NONE)
     }
 
+    protected open inner class Module:
+    DefaultSeparableValueSetOptionInternal<String>(JAVA_SOURCE_TOOL.OPTION_MODULE, "=", ",", this)
     override val module: SeparableValueSetOptionInternal<String> by lazy {
-        DefaultSeparableValueSetOptionInternal<String>(JAVA_SOURCE_TOOL.OPTION_MODULE, "=", ",", this)
+        Module()
     }
 
+    protected open inner class ModuleSourcePath:
+    DefaultSeparableValueSetOptionInternal<String>(JAVA_SOURCE_TOOL.OPTION_MODULE_SOURCE_PATH, "=", pathSeparator, this)
     override val moduleSourcePath: SeparableValueSetOptionInternal<String> by lazy {
-        DefaultSeparableValueSetOptionInternal<String>(JAVA_SOURCE_TOOL.OPTION_MODULE_SOURCE_PATH, "=", pathSeparator, this)
+        ModuleSourcePath()
     }
     //TODO: collapse moduleSourcePath patterns
 

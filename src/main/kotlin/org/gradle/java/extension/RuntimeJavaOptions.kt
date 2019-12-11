@@ -65,17 +65,32 @@ abstract class RuntimeJavaOptionsInternal: RuntimeJavaOptions, CommonJavaOptions
     }
 
 
-    override val listModules          = DefaultToggleOptionInternal(JAVA.OPTION_LIST_MODULES)
-    override val validateModules      = DefaultToggleOptionInternal(JAVA.OPTION_VALIDATE_MODULES)
-    override val showModuleResolution = DefaultToggleOptionInternal(JAVA.OPTION_SHOW_MODULE_RESOLUTION)
+    protected open inner class ListModules:
+    DefaultToggleOptionInternal(JAVA.OPTION_LIST_MODULES)
+    override val listModules:          ToggleOptionInternal = ListModules()
 
-    override val describeModule by lazy {DefaultSeparableValueScalarOptionInternal<String?>(JAVA.OPTION_DESCRIBE_MODULE, "=", null, this)}
-    override val module         by lazy {DefaultSeparableValueScalarOptionInternal<String?>(JAVA.OPTION_MODULE,          "=", null, this)}
+    protected open inner class ValidateModules:
+    DefaultToggleOptionInternal(JAVA.OPTION_VALIDATE_MODULES)
+    override val validateModules:      ToggleOptionInternal = ValidateModules()
+
+    protected open inner class ShowModuleResolution:
+    DefaultToggleOptionInternal(JAVA.OPTION_SHOW_MODULE_RESOLUTION)
+    override val showModuleResolution: ToggleOptionInternal = ShowModuleResolution()
+
+    protected open inner class DescribeModule:
+    DefaultSeparableValueScalarOptionInternal<String?>(JAVA.OPTION_DESCRIBE_MODULE, "=", null, this)
+    override val describeModule: SeparableValueScalarOptionInternal<String?> by lazy {DescribeModule()}
+
+    protected open inner class Module:
+    DefaultSeparableValueScalarOptionInternal<String?>(JAVA.OPTION_MODULE,          "=", null, this)
+    override val module:         SeparableValueScalarOptionInternal<String?> by lazy {Module()}
     override fun module(moduleName: String, mainClassName: String) {
         module(moduleName + '/' + mainClassName)
     }
 
-    private val illegalAccess = DefaultScalarOptionInternal<String?>(JAVA.OPTION_ILLEGAL_ACCESS, null)
+    protected open inner class IllegalAccess:
+    DefaultScalarOptionInternal<String?>(JAVA.OPTION_ILLEGAL_ACCESS, null)
+    private val illegalAccess = IllegalAccess()
     override fun illegalAccessDefault() {
         illegalAccess(null)
     }
@@ -92,7 +107,9 @@ abstract class RuntimeJavaOptionsInternal: RuntimeJavaOptions, CommonJavaOptions
         illegalAccess(JAVA.DENY)
     }
 
-    override val addOpens by lazy {DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA.OPTION_ADD_OPENS, "=", "=", ",", this)}
+    protected open inner class AddOpens:
+    DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA.OPTION_ADD_OPENS, "=", "=", ",", this)
+    override val addOpens: SeparableValueLinkedHashMultimapOptionInternal<String, String> by lazy {AddOpens()}
 
     // addModules targets
     override val ALL_DEFAULT = JAVA.ALL_DEFAULT

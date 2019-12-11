@@ -63,27 +63,46 @@ abstract class CommonJavaOptionsInternal: CommonJavaOptions, ModulePathOptionsIn
     }
 
 
+    protected open inner class AddModules:
+    DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_ADD_MODULES,         "=", ",",           this)
     override val addModules:        SeparableValueSetOptionInternal<String> by lazy {
-        DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_ADD_MODULES,         "=", ",",           this)
-    }
-    override val limitModules:      SeparableValueSetOptionInternal<String> by lazy {
-        DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_LIMIT_MODULES,       "=", ",",           this)
-    }
-    override val modulePath:        SeparableValueSetOptionInternal<String> by lazy {
-        DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_MODULE_PATH,         "=", pathSeparator, this)
-    }
-    override val upgradeModulePath: SeparableValueSetOptionInternal<String> by lazy {
-        DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_UPGRADE_MODULE_PATH, "=", pathSeparator, this)
+        AddModules()
     }
 
+    protected open inner class LimitModules:
+    DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_LIMIT_MODULES,       "=", ",",           this)
+    override val limitModules:      SeparableValueSetOptionInternal<String> by lazy {
+        LimitModules()
+    }
+
+    protected open inner class ModulePath:
+    DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_MODULE_PATH,         "=", pathSeparator, this)
+    override val modulePath:        SeparableValueSetOptionInternal<String> by lazy {
+        ModulePath()
+    }
+
+    protected open inner class UpgradeModulePath:
+    DefaultSeparableValueSetOptionInternal<String>(JAVA_COMMON_TOOL.OPTION_UPGRADE_MODULE_PATH, "=", pathSeparator, this)
+    override val upgradeModulePath: SeparableValueSetOptionInternal<String> by lazy {
+        UpgradeModulePath()
+    }
+
+    protected open inner class PatchModule:
+    DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA_COMMON_TOOL.OPTION_PATCH_MODULE, "=", "=", pathSeparator, this)
     override val patchModule: SeparableValueLinkedHashMultimapOptionInternal<String, String> by lazy {
-        DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA_COMMON_TOOL.OPTION_PATCH_MODULE, "=", "=", pathSeparator, this)
+        PatchModule()
     }
+
+    protected open inner class AddReads:
+    DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA_COMMON_TOOL.OPTION_ADD_READS,    "=", "=", ",",           this)
     override val addReads:    SeparableValueLinkedHashMultimapOptionInternal<String, String> by lazy {
-        DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA_COMMON_TOOL.OPTION_ADD_READS,    "=", "=", ",",           this)
+        AddReads()
     }
+
+    protected open inner class AddExports:
+    DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA_COMMON_TOOL.OPTION_ADD_EXPORTS,  "=", "=", ",",           this)
     override val addExports:  SeparableValueLinkedHashMultimapOptionInternal<String, String> by lazy {
-        DefaultSeparableValueLinkedHashMultimapOptionInternal<String, String>(JAVA_COMMON_TOOL.OPTION_ADD_EXPORTS,  "=", "=", ",",           this)
+        AddExports()
     }
 
     // addModules targets
