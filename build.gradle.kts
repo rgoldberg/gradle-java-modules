@@ -17,7 +17,7 @@ plugins {
     groovy
     `java-gradle-plugin`
     `java-library`
-    kotlin("jvm")                       version "1.3.61"
+    `embedded-kotlin`
     id("com.github.ben-manes.versions") version "0.27.0"
     id("com.gradle.plugin-publish")     version "0.10.1"
 //    id("org.ysb33r.gradletest")         version "2.0"
@@ -132,7 +132,7 @@ dependencies {
         exclude("org.codehaus.groovy", "groovy-all")
     }
     implementation(    gradleKotlinDsl())
-    compileOnly(       kotlin("gradle-plugin", "1.3.61"))
+    compileOnly(       embeddedKotlin("gradle-plugin"))
 }
 
 dependencyLocking {

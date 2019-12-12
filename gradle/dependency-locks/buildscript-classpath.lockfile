@@ -12,6 +12,8 @@ de.undercouch:gradle-download-task:3.4.3
 org.apache.httpcomponents:httpclient:4.5.3
 org.apache.httpcomponents:httpcore:4.4.6
 org.apache.maven:maven-model:3.0.4
+org.gradle.kotlin:plugins:1.3.3
+org.gradle.kotlin.embedded-kotlin:org.gradle.kotlin.embedded-kotlin.gradle.plugin:1.3.3
 org.jetbrains:annotations:13.0
 org.jetbrains.intellij.deps:trove4j:1.0.20181211
 org.jetbrains.kotlin:kotlin-android-extensions:1.3.61
@@ -26,6 +28,7 @@ org.jetbrains.kotlin:kotlin-gradle-plugin-api:1.3.61
 org.jetbrains.kotlin:kotlin-gradle-plugin-model:1.3.61
 org.jetbrains.kotlin:kotlin-native-utils:1.3.61
 org.jetbrains.kotlin:kotlin-reflect:1.3.61
+org.jetbrains.kotlin:kotlin-sam-with-receiver:1.3.61
 org.jetbrains.kotlin:kotlin-script-runtime:1.3.61
 org.jetbrains.kotlin:kotlin-scripting-common:1.3.61
 org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.3.61
@@ -33,8 +36,9 @@ org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable:1.3.61
 org.jetbrains.kotlin:kotlin-scripting-jvm:1.3.61
 org.jetbrains.kotlin:kotlin-stdlib:1.3.61
 org.jetbrains.kotlin:kotlin-stdlib-common:1.3.61
+org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.3.61
+org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.61
 org.jetbrains.kotlin:kotlin-util-io:1.3.61
-org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:1.3.61
 org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.1
 #org.tukaani:xz:1.6
 #org.ysb33r.gradle:grolifant:0.13
