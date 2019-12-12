@@ -25,13 +25,6 @@ import org.gradle.api.internal.tasks.testing.testng.TestNGTestFramework
 import org.gradle.api.tasks.testing.Test
 
 
-val Test.moduleNameCommaDelimitedString
-get() = testFramework.moduleNameCommaDelimitedString
-
-val TestFramework.moduleNameCommaDelimitedString
-get() = moduleNameIset.firstOrNull()
-
-
 val Test.moduleNameIset
 get() = testFramework.moduleNameIset
 
