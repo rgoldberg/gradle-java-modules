@@ -87,7 +87,9 @@ class JigsawPlugin: Plugin<Project> {
     fun getModuleNameIbyModuleInfoJavaPath(sourceSetName: String) =
         moduleNameIbyModuleInfoJavaPath_IbySourceSetName.getOrDefault(sourceSetName, persistentMapOf())
 
-    fun getModuleName(main: String): String? {
+    fun getModuleName(main: String?): String? {
+        main ?: return null
+
         val slashIndex = main.indexOf('/')
         return when {
             // build script specified module/class

@@ -32,7 +32,7 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
     get() = JavaExec::class.java
 
     override fun configureTask(javaExec: JavaExec, jigsawPlugin: JigsawPlugin) {
-        val main = javaExec.main ?: return
+        val main = javaExec.main
 
         jigsawPlugin.getModuleName(main)?.let {moduleName ->
             javaExec.setModuleNamesInputProperty(moduleName)
@@ -45,7 +45,7 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
                 JAVA.addModuleArguments(args, persistentSetOf(moduleName), classpath.files)
 
                 args += JAVA.OPTION_MODULE
-                args += main
+                args += main!!
 
                 javaExec.jvmArgs(args)
                 javaExec.main      = ""

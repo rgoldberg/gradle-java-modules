@@ -36,7 +36,7 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
     get() = CreateStartScripts::class.java
 
     override fun configureTask(createStartScripts: CreateStartScripts, jigsawPlugin: JigsawPlugin) {
-        val main = createStartScripts.mainClassName ?: return
+        val main = createStartScripts.mainClassName
 
         jigsawPlugin.getModuleName(main)?.let {moduleName ->
             createStartScripts.setModuleNamesInputProperty(moduleName)
@@ -56,7 +56,7 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
                 args += LIB_DIR_PLACEHOLDER
 
                 args += JAVA.OPTION_MODULE
-                args += main
+                args += main!!
 
                 createStartScripts.defaultJvmOpts = args
                 createStartScripts.mainClassName  = ""
