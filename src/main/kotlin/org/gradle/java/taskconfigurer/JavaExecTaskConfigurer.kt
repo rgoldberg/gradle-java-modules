@@ -16,14 +16,8 @@
 package org.gradle.java.taskconfigurer
 
 
-import kotlinx.collections.immutable.persistentSetOf
-import org.gradle.api.Action
 import org.gradle.api.tasks.JavaExec
-import org.gradle.java.JigsawPlugin
 import org.gradle.java.extension.JavaExecOptionsInternal
-import org.gradle.java.jdk.JAVA
-import org.gradle.java.util.doAfterAllOtherDoFirstActions
-import org.gradle.java.util.doBeforeAllOtherDoLastActions
 
 
 class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
@@ -33,30 +27,4 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
 
     override val optionsInternalClass
     get() = JavaExecOptionsInternal::class.java
-
-    override fun configureTask(javaExec: JavaExec, jigsawPlugin: JigsawPlugin) {
-        val main = javaExec.main
-
-        jigsawPlugin.getModuleName(main)?.let {moduleName ->
-            val classpath by lazy {javaExec.classpath}
-
-            javaExec.doAfterAllOtherDoFirstActions(Action {
-                val args = mutableListOf<String>()
-
-                JAVA.addModuleArguments(args, persistentSetOf(moduleName), classpath.files)
-
-                args += JAVA.OPTION_MODULE
-                args += main!!
-
-                javaExec.jvmArgs(args)
-                javaExec.main      = ""
-                javaExec.classpath = javaExec.project.files()
-            })
-
-            javaExec.doBeforeAllOtherDoLastActions(Action {
-                javaExec.main      = main
-                javaExec.classpath = classpath
-            })
-        }
-    }
 }

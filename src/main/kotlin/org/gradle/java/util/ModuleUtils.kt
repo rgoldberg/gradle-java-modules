@@ -16,61 +16,12 @@
 package org.gradle.java.util
 
 
-import java.io.File
 import java.io.IOException
-import java.lang.System.lineSeparator
 import java.nio.file.Files.isDirectory
 import java.nio.file.Files.newDirectoryStream
 import java.nio.file.Path
-import kotlinx.collections.immutable.ImmutableCollection
 import org.gradle.api.GradleException
 
-
-private val LS = lineSeparator()
-
-
-fun Set<File>.splitIntoModulePathAndPatchModule(
-    moduleNameIcoll:     ImmutableCollection<String>,
-    modulePathConsumer:  (List<File>) -> Unit,
-    patchModuleConsumer: (List<File>) -> Unit
-) {
-    // determine which classpath elements will be in --module-path, and which in --patch-module
-    val classpathFileCount  = size
-    val modulePathFileList  = ArrayList<File>(classpathFileCount)
-    val patchModuleFileList = ArrayList<File>(classpathFileCount)
-
-    for (classpathFile in this) {
-        if (classpathFile.toPath().containsModules) {
-            // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
-            modulePathFileList += classpathFile
-        }
-        else {
-            // directories that don't contain module-info.class or *.jar files
-            patchModuleFileList += classpathFile
-        }
-    }
-
-    // add module arguments
-    if (modulePathFileList.isNotEmpty()) {
-        modulePathConsumer(modulePathFileList)
-    }
-
-    if (
-        patchModuleFileList.isNotEmpty() &&
-            moduleNameIcoll.isNotEmpty()
-    ) {
-        if (moduleNameIcoll.size > 1) {
-            throw GradleException(
-                "Cannot determine into which of the multiple modules to patch the non-module directories."                             + LS + LS
-                + "To avoid this problem, either only have one module per source set, or modularize the currently non-modular source." + LS + LS
-                + "Modules:"                                                    + LS + LS + moduleNameIcoll    .joinToString(LS)       + LS + LS
-                + "Directories containing non-modular source and/or resources:" + LS + LS + patchModuleFileList.joinToString(LS)
-            )
-        }
-
-        patchModuleConsumer(patchModuleFileList)
-    }
-}
 
 // directories that contain a module-info.class or at least one *.jar file; files (e.g., jars); nonexistent paths
 val Path.containsModules

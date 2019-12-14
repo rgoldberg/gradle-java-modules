@@ -16,12 +16,6 @@
 package org.gradle.java.jdk
 
 
-import java.io.File
-import java.io.File.pathSeparator
-import kotlinx.collections.immutable.ImmutableCollection
-import org.gradle.java.util.splitIntoModulePathAndPatchModule
-
-
 internal val JAVA_COMMON_TOOL = object: JavaCommonTool() {}
 
 abstract class JavaCommonTool protected constructor() {
@@ -40,29 +34,4 @@ abstract class JavaCommonTool protected constructor() {
     val ALL_SYSTEM      = "ALL-SYSTEM"
 
     val ALL_UNNAMED = "ALL-UNNAMED"
-
-
-    fun addModuleArguments(args: MutableList<String>, moduleNameIcoll: ImmutableCollection<String>, classpathFileSet: Set<File>) {
-        classpathFileSet.splitIntoModulePathAndPatchModule(
-            moduleNameIcoll,
-            {modulePathFileList ->
-                args += OPTION_MODULE_PATH
-                args += modulePathFileList.joinToString(pathSeparator)
-            },
-            {patchModuleFileList ->
-                // moduleNameIcoll is guaranteed to have exactly one element
-                val moduleName = moduleNameIcoll.iterator().next()
-
-                args += OPTION_PATCH_MODULE
-                args +=
-                    patchModuleFileList.joinTo(
-                        StringBuilder(moduleName.length + patchModuleFileList.size + patchModuleFileList.sumBy {it.toString().length})
-                        .append(moduleName)
-                        .append('='),
-                        pathSeparator
-                    )
-                    .toString()
-            }
-        )
-    }
 }
