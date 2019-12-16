@@ -16,14 +16,8 @@
 package org.gradle.java.taskconfigurer
 
 
-import org.gradle.api.Action
 import org.gradle.api.tasks.javadoc.Javadoc
-import org.gradle.external.javadoc.CoreJavadocOptions
-import org.gradle.java.JigsawPlugin
 import org.gradle.java.extension.JavadocOptionsInternal
-import org.gradle.java.jdk.JAVADOC
-import org.gradle.java.util.doAfterAllOtherDoFirstActions
-import org.gradle.java.util.doBeforeAllOtherDoLastActions
 
 
 class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
@@ -33,23 +27,4 @@ class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
 
     override val optionsInternalClass
     get() = JavadocOptionsInternal::class.java
-
-    override fun configureTask(javadoc: Javadoc, jigsawPlugin: JigsawPlugin) {
-        val classpath by lazy {javadoc.classpath}
-
-        javadoc.doAfterAllOtherDoFirstActions(Action {
-            if (! classpath.isEmpty) {
-                (javadoc.options as CoreJavadocOptions).addStringOption(JAVADOC_TASK_OPTION_MODULE_PATH, classpath.asPath)
-
-                javadoc.classpath = javadoc.project.files()
-            }
-        })
-
-        javadoc.doBeforeAllOtherDoLastActions(Action {javadoc.classpath = classpath})
-    }
-
-
-    companion object {
-        private val JAVADOC_TASK_OPTION_MODULE_PATH = JAVADOC.OPTION_MODULE_PATH.substring(1)
-    }
 }

@@ -16,13 +16,19 @@
 package org.gradle.java.extension
 
 
+import org.gradle.api.JavaVersion
 import org.gradle.api.reflect.TypeOf.typeOf
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.CoreJavadocOptions
+import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JAVADOC
 
 
 interface JavadocOptions: SourceJavaOptions, AutoGenerateSettableCascading {
+
+    override val modulePath: AutoGeneratableSeparableValueVarargOption<String>
+
+    override val patchModule: AutoGeneratableSeparableValueKeyedVarargOption<String, String>
 
     fun expandRequiresDefault()
     fun expandRequiresTransitive()
@@ -84,7 +90,11 @@ SourceJavaOptionsInternal() {
 
 
     private val expandRequires by lazy {
-        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_EXPAND_REQUIRES, "=", null, this)
+        object:
+        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_EXPAND_REQUIRES, "=", null, this) {
+            override val flag
+            get() = super.flag.substring(1)
+        }
     }
     override fun expandRequiresDefault() {
         expandRequires(null)
@@ -97,7 +107,11 @@ SourceJavaOptionsInternal() {
     }
 
     private val showModuleContents by lazy {
-        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_MODULE_CONTENTS, "=", null, this)
+        object:
+        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_MODULE_CONTENTS, "=", null, this) {
+            override val flag
+            get() = super.flag.substring(1)
+        }
     }
     override fun showModuleContentsApi() {
         showModuleContents(null)
@@ -107,7 +121,11 @@ SourceJavaOptionsInternal() {
     }
 
     private val showPackages by lazy {
-        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_PACKAGES, "=", null, this)
+        object:
+        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_PACKAGES, "=", null, this) {
+            override val flag
+            get() = super.flag.substring(1)
+        }
     }
     override fun showPackagesExported() {
         showPackages(null)
@@ -117,7 +135,11 @@ SourceJavaOptionsInternal() {
     }
 
     private val showTypes by lazy {
-        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_TYPES, "=", null, this)
+        object:
+        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_TYPES, "=", null, this) {
+            override val flag
+            get() = super.flag.substring(1)
+        }
     }
     override fun showTypesPublic() {
         showTypes(JAVADOC.PUBLIC)
@@ -133,7 +155,11 @@ SourceJavaOptionsInternal() {
     }
 
     private val showMembers by lazy {
-        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_MEMBERS, "=", null, this)
+        object:
+        DefaultSeparableValueScalarOptionInternal<String?>(JAVADOC.OPTION_SHOW_MEMBERS, "=", null, this) {
+            override val flag
+            get() = super.flag.substring(1)
+        }
     }
     override fun showMembersPublic() {
         showMembers(JAVADOC.PUBLIC)
@@ -147,6 +173,112 @@ SourceJavaOptionsInternal() {
     override fun showMembersPrivate() {
         showMembers(JAVADOC.PRIVATE)
     }
+
+
+    override val source: ScalarOptionInternal<JavaVersion?> =
+        object:
+        Source() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val release: SeparableValueScalarOptionInternal<JavaVersion?> =
+        object:
+        Release() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val system: SeparableValueScalarOptionInternal<String?> =
+        object:
+        System() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val module: SeparableValueSetOptionInternal<String> =
+        object:
+        Module() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val moduleSourcePath: SeparableValueSetOptionInternal<String> =
+        object:
+        ModuleSourcePath() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+
+    override val addModules: SeparableValueSetOptionInternal<String> =
+        object:
+        AddModules() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val limitModules: SeparableValueSetOptionInternal<String> =
+        object:
+        LimitModules() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val modulePath: AutoGeneratableSeparableValueSetOptionInternal<String> by lazy {
+        object:
+        AutoGeneratableSeparableValueSetOptionInternal<String>,
+        ModulePath(),
+        AutoGeneratableCascading by DefaultAutoGeneratableCascading(this) {
+            override val flag
+            get() = super.flag.substring(1)
+
+            override val value: Set<String>
+            get() =
+                super.value.appendAutoGeneratedIterator(autoGenerate.isEnabled) {
+                    val classpath = javadoc.classpath
+
+                    autoGenerateModulePath(classpath, {javadoc.classpath = javadoc.project.files()}, {javadoc.classpath = classpath})
+                }
+        }
+    }
+
+    override val upgradeModulePath: SeparableValueSetOptionInternal<String> =
+        object:
+        UpgradeModulePath() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val patchModule: AutoGeneratableSeparableValueLinkedHashMultimapOptionInternal<String, String> by lazy {
+        object:
+        AutoGeneratableSeparableValueLinkedHashMultimapOptionInternal<String, String>,
+        PatchModule(),
+        AutoGeneratableCascading by DefaultAutoGeneratableCascading(this) {
+            override val flag
+            get() = super.flag.substring(1)
+
+            override val value: Map<String, Set<String>>
+            get() =
+                valueMutable.appendAutoGeneratedMapFromPair(autoGenerate.isEnabled) {
+                    autoGeneratePatchModule(javadoc.project.plugins.getPlugin(JigsawPlugin::class.java).moduleNameIset, javadoc.classpath)
+                }
+        }
+    }
+
+    override val addReads: SeparableValueLinkedHashMultimapOptionInternal<String, String> =
+        object:
+        AddReads() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
+
+    override val addExports: SeparableValueLinkedHashMultimapOptionInternal<String, String> =
+        object:
+        AddExports() {
+            override val flag
+            get() = super.flag.substring(1)
+        }
 
 
     companion object {
