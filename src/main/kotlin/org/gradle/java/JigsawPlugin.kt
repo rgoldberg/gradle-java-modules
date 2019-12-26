@@ -140,16 +140,8 @@ class JigsawPlugin: Plugin<Project> {
         project.gradle.taskGraph.whenReady {taskExecutionGraph ->
             val taskList = taskExecutionGraph.allTasks
 
-            if (
-                taskList.stream().anyMatch {task ->
-                    project == task.project &&
-                    taskConfigurerSet.stream().anyMatch {taskConfigurer -> taskConfigurer.taskClass.isInstance(task)}
-                } &&
-                moduleNameIbyModuleInfoJavaPath_IbySourceSetName.isNotEmpty()
-            ) {
-                for (taskConfigurer in taskConfigurerSet) {
-                    configure(taskList, taskConfigurer)
-                }
+            for (taskConfigurer in taskConfigurerSet) {
+                configure(taskList, taskConfigurer)
             }
         }
     }
