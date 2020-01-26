@@ -158,6 +158,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--module");
                 args.add(moduleName + '/' + run.getMain());
                 run.setJvmArgs(args);
+                run.setMain("");
                 run.setClasspath(project.files());
             }
         });
@@ -178,6 +179,7 @@ public class JigsawPlugin implements Plugin<Project> {
                 args.add("--module");
                 args.add(moduleName + '/' + startScripts.getMainClassName());
                 startScripts.setDefaultJvmOpts(args);
+                startScripts.setMainClassName("");
             }
         });
         startScripts.doLast(new Action<Task>() {
