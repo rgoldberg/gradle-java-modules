@@ -37,7 +37,7 @@ open class KotlinCompileOptionsInternal(
     private val      kotlinCompile: KotlinCompile
 ):
 KotlinCompileOptions,
-OptionsInternal(),
+ModulePathOptionsInternal(),
 AutoGeneratableCascading by DefaultAutoGeneratableCascading(autoGenerateParent) {
 
     //TODO?

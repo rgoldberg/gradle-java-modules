@@ -17,6 +17,8 @@ package org.gradle.java.extension
 
 
 import java.io.File.pathSeparator
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 import org.gradle.api.JavaVersion
 import org.gradle.api.reflect.TypeOf
 import org.gradle.java.jdk.JAVA_SOURCE_TOOL
@@ -77,4 +79,51 @@ abstract class SourceJavaOptionsInternal: SourceJavaOptions, CommonJavaOptionsIn
         DefaultSeparableValueSetOptionInternal<String>(JAVA_SOURCE_TOOL.OPTION_MODULE_SOURCE_PATH, "=", pathSeparator, this)
     }
     //TODO: collapse moduleSourcePath patterns
+
+
+    protected fun autoGenerateModuleSourcePath(moduleSourceIset: ImmutableSet<String>): ImmutableSet<String> {
+        if (moduleSourceIset.size == 1) {
+            return moduleSourceIset
+        }
+
+        val moduleSourceCommonUitr = moduleSourceIset.iterator()
+
+        var commonPrefix = moduleSourceCommonUitr.next()
+        var commonSuffix = commonPrefix
+
+        while (moduleSourceCommonUitr.hasNext()) {
+            val currModuleSource = moduleSourceCommonUitr.next()
+            commonPrefix = commonPrefix.commonPrefixWith(currModuleSource)
+            commonSuffix = commonSuffix.commonSuffixWith(currModuleSource)
+        }
+
+        if (commonPrefix.isEmpty() && commonSuffix.isEmpty()) {
+            return moduleSourceIset
+        }
+
+        val commonPrefixLength = commonPrefix.length
+        val commonSuffixLength = commonSuffix.length
+
+        val sb = StringBuilder()
+        sb.append(commonPrefix)
+        sb.append('{')
+
+        val moduleSourceAlternateUitr = moduleSourceIset.iterator()
+
+        appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb)
+
+        while (moduleSourceAlternateUitr.hasNext()) {
+            sb.append(',')
+            appendModuleSourceAlternate(moduleSourceAlternateUitr.next(), commonPrefixLength, commonSuffixLength, sb)
+        }
+
+        sb.append('}')
+        sb.append(commonSuffix)
+
+        return persistentSetOf(sb.toString())
+    }
+
+    private fun appendModuleSourceAlternate(moduleSource: String, commonPrefixLength: Int, commonSuffixLength: Int, sb: StringBuilder) {
+        sb.append(moduleSource, commonPrefixLength, moduleSource.length - commonSuffixLength)
+    }
 }

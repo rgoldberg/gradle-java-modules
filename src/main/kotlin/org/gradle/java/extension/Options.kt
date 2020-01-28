@@ -16,8 +16,12 @@
 package org.gradle.java.extension
 
 
+import kotlinx.collections.immutable.persistentSetOf
+import org.gradle.api.file.FileCollection
 import org.gradle.api.reflect.HasPublicType
 import org.gradle.api.reflect.TypeOf
+import org.gradle.api.tasks.compile.AbstractCompile
+import org.gradle.java.util.containsModules
 
 
 const val TASK_OPTIONS_EXTENSION_NAME = "options"
@@ -51,4 +55,22 @@ abstract class OptionsInternal: Options, HasPublicType {
             action()
         }
     }
+}
+
+abstract class ModulePathOptionsInternal: OptionsInternal() {
+
+    protected fun AbstractCompile.autoGenerateModulePath(classpath: FileCollection): Iterator<String> {
+        return autoGenerateModulePath(classpath, {this.classpath = project.files()}, {this.classpath = classpath})
+    }
+
+    protected fun autoGenerateModulePath(classpath: FileCollection, clearClasspath: () -> Unit, resetClasspath: () -> Unit) =
+        if (classpath.isEmpty) {
+            persistentSetOf<String>().iterator()
+        }
+        else {
+            configureMlist += clearClasspath
+                resetMlist += resetClasspath
+
+            classpath.files.stream().filter {it.toPath().containsModules}.map(Any::toString).iterator()
+        }
 }

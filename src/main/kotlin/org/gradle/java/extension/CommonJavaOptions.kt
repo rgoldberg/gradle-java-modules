@@ -17,8 +17,13 @@ package org.gradle.java.extension
 
 
 import java.io.File.pathSeparator
+import java.lang.System.lineSeparator
+import kotlinx.collections.immutable.ImmutableCollection
+import org.gradle.api.GradleException
+import org.gradle.api.file.FileCollection
 import org.gradle.api.reflect.TypeOf
 import org.gradle.java.jdk.JAVA_COMMON_TOOL
+import org.gradle.java.util.containsModules
 
 
 interface CommonJavaOptions: Options, SeparateValueSettableCascading {
@@ -41,7 +46,7 @@ interface CommonJavaOptions: Options, SeparateValueSettableCascading {
 }
 
 
-abstract class CommonJavaOptionsInternal: CommonJavaOptions, OptionsInternal(), AutoGeneratableCascading, SeparableValueCascading {
+abstract class CommonJavaOptionsInternal: CommonJavaOptions, ModulePathOptionsInternal(), AutoGeneratableCascading, SeparableValueCascading {
 
     abstract override fun getPublicType(): TypeOf<out CommonJavaOptions>
 
@@ -87,4 +92,37 @@ abstract class CommonJavaOptionsInternal: CommonJavaOptions, OptionsInternal(), 
 
     // addExports, addReads & addOpens targets
     override val ALL_UNNAMED = JAVA_COMMON_TOOL.ALL_UNNAMED
+
+
+    protected fun autoGeneratePatchModule(moduleNameIcoll: ImmutableCollection<String>, classpath: FileCollection) =
+        when (moduleNameIcoll.size) {
+            0 -> {
+                null
+            }
+            1 -> {
+                autoGeneratePatchModule(moduleNameIcoll.iterator().next(), classpath)
+            }
+            else -> {
+                throw GradleException(
+                    "Cannot determine into which of the multiple modules to patch the non-module directories." + LS + LS
+                    + "To avoid this problem, either only have one module per source set, or modularize the currently non-modular source." + LS + LS
+                    + "Modules:" + LS + LS + moduleNameIcoll.joinToString(LS)
+                )
+            }
+        }
+
+    protected fun autoGeneratePatchModule(moduleName: String, classpath: FileCollection) =
+        classpath.files.stream().filter {! it.toPath().containsModules}.map(Any::toString).iterator().let {
+            if (it.hasNext()) {
+                moduleName to it
+            }
+            else {
+                null
+            }
+        }
+
+
+    companion object {
+        private val LS = lineSeparator()
+    }
 }

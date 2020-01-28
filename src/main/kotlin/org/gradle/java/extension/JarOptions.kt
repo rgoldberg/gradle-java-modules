@@ -38,7 +38,7 @@ open class JarOptionsInternal(
     private val                 jar: Jar
 ):
 JarOptions,
-OptionsInternal(),
+ModulePathOptionsInternal(),
 SeparableValueCascading by DefaultSeparableValueCascading(separateValueParent) {
 
     override fun getPublicType() =
