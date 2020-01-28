@@ -31,8 +31,6 @@ class JavadocTaskConfigurer: TaskConfigurer<Javadoc> {
     get() = Javadoc::class.java
 
     override fun configureTask(javadoc: Javadoc, jigsawPlugin: JigsawPlugin) {
-        jigsawPlugin.setModuleNamesInputProperty(javadoc)
-
         val classpath by lazy {javadoc.classpath}
 
         javadoc.doAfterAllOtherDoFirstActions(Action {

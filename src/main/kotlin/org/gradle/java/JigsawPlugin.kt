@@ -62,7 +62,6 @@ import org.gradle.java.taskconfigurer.JavadocTaskConfigurer
 import org.gradle.java.taskconfigurer.KotlinCompileTaskConfigurer
 import org.gradle.java.taskconfigurer.TaskConfigurer
 import org.gradle.java.taskconfigurer.TestTaskConfigurer
-import org.gradle.java.util.setModuleNamesInputProperty
 import org.gradle.java.util.sourceSets
 import org.gradle.java.util.stream
 
@@ -108,9 +107,6 @@ class JigsawPlugin: Plugin<Project> {
             //    directory name
         }
     }
-
-    fun setModuleNamesInputProperty(task: Task) =
-        task.setModuleNamesInputProperty(moduleNameIset.joinToString(","))
 
     fun register(taskConfigurer: TaskConfigurer<out Task>) {
         taskConfigurerSet += taskConfigurer

@@ -54,9 +54,6 @@ class JavaCompileTaskConfigurer: TaskConfigurer<JavaCompile> {
         if (moduleNameIbyModuleInfoJavaPath.isEmpty()) {
             if (javaCompile.isTestInput) {
                 // when source set doesn't contain any module-info.java, only enable modules if compiling a test source set
-
-                jigsawPlugin.setModuleNamesInputProperty(javaCompile)
-
                 val classpath by lazy {javaCompile.classpath}
 
                 javaCompile.doAfterAllOtherDoFirstActions(Action {

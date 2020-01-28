@@ -25,7 +25,6 @@ import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JAVA
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
-import org.gradle.java.util.setModuleNamesInputProperty
 import org.gradle.util.TextUtil.getUnixLineSeparator
 import org.gradle.util.TextUtil.getWindowsLineSeparator
 
@@ -39,8 +38,6 @@ class CreateStartScriptsTaskConfigurer: TaskConfigurer<CreateStartScripts> {
         val main = createStartScripts.mainClassName
 
         jigsawPlugin.getModuleName(main)?.let {moduleName ->
-            createStartScripts.setModuleNamesInputProperty(moduleName)
-
             val classpath by lazy {createStartScripts.classpath}
 
             createStartScripts.doAfterAllOtherDoFirstActions(Action {

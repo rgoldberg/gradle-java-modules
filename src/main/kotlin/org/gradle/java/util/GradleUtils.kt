@@ -35,8 +35,6 @@ private class DoFirstAction<T> internal constructor(private val delegate: Action
 }
 
 
-private const val PROPERTY_NAME_MODULE_NAMES = "moduleNames"
-
 private const val VERB_COMPILE = "compile"
 
 private const val DO_FIRST_ACTION_DISPLAY_NAME = "Execute doFirst {} action"
@@ -119,10 +117,4 @@ fun getSourceSetName(taskName: String, verb: String, target: String): String {
         sb.toString()
     }
 }
-//</editor-fold>
-
-
-//<editor-fold desc="moduleNames input property helper methods">
-fun Task.setModuleNamesInputProperty(moduleNamesCommaDelimited: String) =
-    inputs.property(PROPERTY_NAME_MODULE_NAMES, moduleNamesCommaDelimited)
 //</editor-fold>

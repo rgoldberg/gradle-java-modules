@@ -37,8 +37,6 @@ class TestTaskConfigurer: TaskConfigurer<Test> {
     get() = Test::class.java
 
     override fun configureTask(test: Test, jigsawPlugin: JigsawPlugin) {
-        jigsawPlugin.setModuleNamesInputProperty(test)
-
         val classpath by lazy {test.classpath}
 
         test.doAfterAllOtherDoFirstActions(Action {

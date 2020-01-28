@@ -23,7 +23,6 @@ import org.gradle.java.JigsawPlugin
 import org.gradle.java.jdk.JAVA
 import org.gradle.java.util.doAfterAllOtherDoFirstActions
 import org.gradle.java.util.doBeforeAllOtherDoLastActions
-import org.gradle.java.util.setModuleNamesInputProperty
 
 
 class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
@@ -35,8 +34,6 @@ class JavaExecTaskConfigurer: TaskConfigurer<JavaExec> {
         val main = javaExec.main
 
         jigsawPlugin.getModuleName(main)?.let {moduleName ->
-            javaExec.setModuleNamesInputProperty(moduleName)
-
             val classpath by lazy {javaExec.classpath}
 
             javaExec.doAfterAllOtherDoFirstActions(Action {
