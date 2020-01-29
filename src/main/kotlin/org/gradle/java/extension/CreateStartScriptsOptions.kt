@@ -55,7 +55,24 @@ RuntimeJavaOptionsInternal() {
 
         createStartScripts.defaultJvmOpts = argMlist
 
-        ListArgAppendable(argMlist)
+        object:
+        ListArgAppendable(argMlist) {
+            override fun <T, I> append(option: SeparableValueOptionInternal<T, I>) =
+                if (option is Module) {
+                    createStartScripts.mainClassName =
+                        if (option.separateValue.isEnabled) {
+                            option.flag + ' ' + option.value
+                        }
+                        else {
+                            option.flag + option.flagValueSeparator + option.value
+                        }
+
+                    this
+                }
+                else {
+                    super.append(option)
+                }
+        }
     }()
 
 
@@ -69,8 +86,7 @@ RuntimeJavaOptionsInternal() {
                 if (autoGenerate.isEnabled) {
                     val mainClassName = createStartScripts.mainClassName
 
-                    configureMlist += {createStartScripts.mainClassName = ""}
-                        resetMlist += {createStartScripts.mainClassName = mainClassName}
+                    resetMlist += {createStartScripts.mainClassName = mainClassName}
 
                     if (super.value == null) {
                         return mainClassName

@@ -32,9 +32,46 @@ interface ArgAppendable {
 
     fun append(arg: String)
     fun append(flag: String, value: String)
+
+
+    fun <T, I> appendJoined(option: ValueOptionInternal<T, I>): ArgAppendable {
+        stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
+            append(option.flag + it!!)
+        }
+
+        return this
+    }
+
+    fun <T, I> appendSeparated(option: ValueOptionInternal<T, I>): ArgAppendable {
+        stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
+            append(option.flag, it!!)
+        }
+
+        return this
+    }
+
+    fun <T, I> append(option: SeparableValueOptionInternal<T, I>): ArgAppendable {
+        val append: (String) -> Unit =
+            if (option.separateValue.isEnabled) {
+                {
+                    append(option.flag, it)
+                }
+            }
+            else {
+                {
+                    append(option.flag + option.flagValueSeparator + it)
+                }
+            }
+
+        stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
+            append(it!!)
+        }
+
+        return this
+    }
 }
 
-class ListArgAppendable(val argMlist: MutableList<String>): ArgAppendable {
+open class ListArgAppendable(val argMlist: MutableList<String>): ArgAppendable {
 
     override fun append(arg: String) {
         argMlist += arg
@@ -46,7 +83,7 @@ class ListArgAppendable(val argMlist: MutableList<String>): ArgAppendable {
     }
 }
 
-class JavaForkOptionsArgAppendable(val forkOptions: JavaForkOptions): ArgAppendable {
+open class JavaForkOptionsArgAppendable(val forkOptions: JavaForkOptions): ArgAppendable {
 
     override fun append(arg: String) {
         forkOptions.jvmArgs(arg)
@@ -55,40 +92,4 @@ class JavaForkOptionsArgAppendable(val forkOptions: JavaForkOptions): ArgAppenda
     override fun append(flag: String, value: String) {
         forkOptions.jvmArgs(flag, value)
     }
-}
-
-fun <T, I> ArgAppendable.appendJoined(option: ValueOptionInternal<T, I>): ArgAppendable {
-    stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
-        append(option.flag + it!!)
-    }
-
-    return this
-}
-
-fun <T, I> ArgAppendable.appendSeparated(option: ValueOptionInternal<T, I>): ArgAppendable {
-    stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
-        append(option.flag, it!!)
-    }
-
-    return this
-}
-
-fun <T, I> ArgAppendable.append(option: SeparableValueOptionInternal<T, I>): ArgAppendable {
-    val append: (String) -> Unit =
-        if (option.separateValue.isEnabled) {
-            {
-                append(option.flag, it)
-            }
-        }
-        else {
-            {
-                append(option.flag + option.flagValueSeparator + it)
-            }
-        }
-
-    stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
-        append(it!!)
-    }
-
-    return this
 }

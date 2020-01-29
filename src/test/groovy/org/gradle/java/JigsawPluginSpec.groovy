@@ -201,7 +201,7 @@ APP_NAME="modular"
 APP_BASE_NAME=`basename "$0"`
 
 # Add default JVM options here. You can also use JAVA_OPTS and MODULAR_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS='"--module-path" "$APP_HOME/lib" "--module" "test.module/com.example.AClass"'
+DEFAULT_JVM_OPTS='"--module-path" "$APP_HOME/lib"'
 
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD="maximum"
@@ -335,7 +335,7 @@ save () {
 APP_ARGS=`save "$@"`
 
 # Collect all arguments for the java command, following the shell quoting and substitution rules
-eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $MODULAR_OPTS -classpath "\\"$CLASSPATH\\""  "$APP_ARGS"
+eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $MODULAR_OPTS -classpath "\\"$CLASSPATH\\"" --module test.module/com.example.AClass "$APP_ARGS"
 
 exec "$JAVACMD" "$@"
 '''
@@ -372,7 +372,7 @@ set APP_BASE_NAME=%~n0
 set APP_HOME=%DIRNAME%..
 
 @rem Add default JVM options here. You can also use JAVA_OPTS and MODULAR_OPTS to pass JVM options to this script.
-set DEFAULT_JVM_OPTS="--module-path" "%APP_HOME%\\lib" "--module" "test.module/com.example.AClass"
+set DEFAULT_JVM_OPTS="--module-path" "%APP_HOME%\\lib"
 
 @rem Find java.exe
 if defined JAVA_HOME goto findJavaFromJavaHome
@@ -424,7 +424,7 @@ set CMD_LINE_ARGS=%*
 set CLASSPATH=
 
 @rem Execute modular
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %MODULAR_OPTS%  -classpath "%CLASSPATH%"  %CMD_LINE_ARGS%
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %MODULAR_OPTS%  -classpath "%CLASSPATH%" --module test.module/com.example.AClass %CMD_LINE_ARGS%
 
 :end
 @rem End local scope for the variables with windows NT shell
