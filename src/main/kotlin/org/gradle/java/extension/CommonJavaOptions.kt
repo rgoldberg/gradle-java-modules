@@ -131,7 +131,11 @@ abstract class CommonJavaOptionsInternal: CommonJavaOptions, ModulePathOptionsIn
         }
 
     protected fun autoGeneratePatchModule(moduleName: String, classpath: FileCollection) =
-        classpath.files.stream().filter {! it.toPath().containsModules}.map(Any::toString).iterator().let {
+        classpath.files.asSequence()
+        .filter {! it.toPath().containsModules}
+        .map(Any::toString)
+        .iterator()
+        .let {
             if (it.hasNext()) {
                 moduleName to it
             }

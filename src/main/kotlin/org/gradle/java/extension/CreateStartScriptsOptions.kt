@@ -125,9 +125,11 @@ RuntimeJavaOptionsInternal() {
 
             private fun replaceLibDirectoryPlaceholder(file: File, libDirReplacement: String, lineSeparator: String) =
                 try {
-                    file.readLines().stream().map {line -> LIB_DIR_PLACEHOLDER_REGEX.replace(line, libDirReplacement)}.use {lineStream ->
+                    file.readLines().asSequence()
+                    .map {LIB_DIR_PLACEHOLDER_REGEX.replace(it, libDirReplacement)}
+                    .let {lineSeq ->
                         file.bufferedWriter().use {
-                            Iterable(lineStream::iterator).joinTo(it, lineSeparator, "", lineSeparator)
+                            lineSeq.asIterable().joinTo(it, lineSeparator, "", lineSeparator)
                         }
                     }
                 }

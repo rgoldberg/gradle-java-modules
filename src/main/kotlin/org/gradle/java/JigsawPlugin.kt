@@ -37,12 +37,6 @@ import java.io.IOException
 import java.lang.System.lineSeparator
 import java.nio.file.Path
 import java.util.TreeMap
-import java.util.TreeSet
-import java.util.stream.Collectors.joining
-import java.util.stream.Collectors.toCollection
-import java.util.stream.Collectors.toMap
-import java.util.stream.Stream
-import java.util.stream.Stream.concat
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
@@ -64,7 +58,6 @@ import org.gradle.java.taskconfigurer.KotlinCompileTaskConfigurer
 import org.gradle.java.taskconfigurer.TaskConfigurer
 import org.gradle.java.taskconfigurer.TestTaskConfigurer
 import org.gradle.java.util.sourceSets
-import org.gradle.java.util.stream
 
 
 class JigsawPlugin: Plugin<Project> {
@@ -73,9 +66,9 @@ class JigsawPlugin: Plugin<Project> {
     private lateinit var project: Project
 
     val moduleNameIset by lazy {
-        moduleNameIbyModuleInfoJavaPath_IbySourceSetName.values.stream()
-        .flatMap {it.values.stream()}
-        .collect(toCollection {TreeSet<String>()})
+        moduleNameIbyModuleInfoJavaPath_IbySourceSetName.values.asSequence()
+        .flatMap {it.values.asSequence()}
+        .toSortedSet()
         .toImmutableSet()
     }
 
@@ -164,9 +157,9 @@ class JigsawPlugin: Plugin<Project> {
 
         val tasks = project.tasks
 
-        project.sourceSets.stream()
+        project.sourceSets.asSequence()
         .flatMap {sourceSet ->
-            stream(sourceSet.allJava.matching {pattern -> pattern.include("**/" + JAVAC.FILE_NAME_MODULE_INFO_JAVA)})
+            sourceSet.allJava.matching {it.include("**/" + JAVAC.FILE_NAME_MODULE_INFO_JAVA)}.asSequence()
             .map {sourceSet to it.toPath()}
         }
         .forEach {(sourceSet, moduleInfoJavaPath) ->
@@ -177,18 +170,18 @@ class JigsawPlugin: Plugin<Project> {
 
                 if (! parseResult.isSuccessful) {
                     throw GradleException(
-                        concat(
-                            Stream.of(
+                        (
+                            sequenceOf(
                                 "Couldn't parse Java module name from:",
                                 "",
                                 moduleInfoJavaPath.toString(),
                                 "",
                                 "Because of the following parse problems:",
                                 ""
-                            ),
-                            parseResult.problems.stream().map(Any::toString)
+                            )
+                            + parseResult.problems.asSequence().map(Any::toString)
                         )
-                        .collect(joining(lineSeparator()))
+                        .joinToString(lineSeparator())
                     )
                 }
 
@@ -200,15 +193,9 @@ class JigsawPlugin: Plugin<Project> {
             }
         }
 
-        moduleNameByModuleInfoJavaPath_BySourceSetName.entries.stream()
-        .collect(
-            toMap<Map.Entry<String, TreeMap<Path, String>>, String, ImmutableMap<Path, String>, TreeMap<String, ImmutableMap<Path, String>>>(
-                {it.key},
-                {it.value.toImmutableMap()},
-                {a, _ -> a},
-                ::TreeMap
-            )
-        )
+        moduleNameByModuleInfoJavaPath_BySourceSetName.entries.asSequence()
+        .map {it.key to it.value.toImmutableMap()}
+        .toMap(TreeMap())
         .toImmutableMap()
     }
 

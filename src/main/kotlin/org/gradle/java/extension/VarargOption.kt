@@ -16,7 +16,6 @@
 package org.gradle.java.extension
 
 
-import java.util.stream.Collectors.joining
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
 
@@ -37,7 +36,10 @@ interface AbstractVarargOptionInternal<T>: VarargOptionInternal<T> {
     get() = persistentSetOf(value)
 
     override fun valueString(i: Collection<T>) =
-        i.stream().map {it.toString()}.collect(joining(delimiter)).ifEmpty {null}
+        i.asSequence()
+        .map(Any?::toString)
+        .joinToString(delimiter)
+        .ifEmpty {null}
 
     val valueMutable: MutableCollection<T>
 

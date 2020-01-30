@@ -71,6 +71,9 @@ abstract class ModulePathOptionsInternal: OptionsInternal() {
             configureMlist += clearClasspath
                 resetMlist += resetClasspath
 
-            classpath.files.stream().filter {it.toPath().containsModules}.map(Any::toString).iterator()
+            classpath.files.asSequence()
+            .filter {it.toPath().containsModules}
+            .map(Any::toString)
+            .iterator()
         }
 }

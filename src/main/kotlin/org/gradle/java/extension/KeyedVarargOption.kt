@@ -16,9 +16,6 @@
 package org.gradle.java.extension
 
 
-import java.util.stream.Collectors.joining
-
-
 interface KeyedVarargOption<K, V>: Option {
 
     operator fun invoke(key: K, vararg values: V) =
@@ -46,7 +43,10 @@ interface AbstractKeyedVarargOptionInternal<K, V, C: Collection<V>, M: MutableCo
     get() = value.entries
 
     override fun valueString(i: Map.Entry<K, C>) =
-        i.value.stream().map {it.toString()}.collect(joining(valueDelimiter, i.key.toString() + keyValueSeparator, "")).ifEmpty {null}
+        i.value.asSequence()
+        .map(Any?::toString)
+        .joinToString(valueDelimiter, i.key.toString() + keyValueSeparator, "")
+        .ifEmpty {null}
 
     val valueMutable: MutableMap<K, M>
 

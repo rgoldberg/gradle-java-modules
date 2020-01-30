@@ -16,7 +16,6 @@
 package org.gradle.java.extension
 
 
-import org.gradle.java.util.stream
 import org.gradle.process.JavaForkOptions
 
 
@@ -35,16 +34,20 @@ interface ArgAppendable {
 
 
     fun <T, I> appendJoined(option: ValueOptionInternal<T, I>): ArgAppendable {
-        stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
-            append(option.flag + it!!)
+        option.valueIterable.asSequence()
+        .mapNotNull {option.valueString(it)}
+        .forEach {
+            append(option.flag + it)
         }
 
         return this
     }
 
     fun <T, I> appendSeparated(option: ValueOptionInternal<T, I>): ArgAppendable {
-        stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
-            append(option.flag, it!!)
+        option.valueIterable.asSequence()
+        .mapNotNull {option.valueString(it)}
+        .forEach {
+            append(option.flag, it)
         }
 
         return this
@@ -63,8 +66,10 @@ interface ArgAppendable {
                 }
             }
 
-        stream(option.valueIterable).map {option.valueString(it)}.filter {it != null}.forEach {
-            append(it!!)
+        option.valueIterable.asSequence()
+        .mapNotNull {option.valueString(it)}
+        .forEach {
+            append(it)
         }
 
         return this
